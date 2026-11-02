@@ -1,0 +1,1 @@
+"""SentinelGate prompts package."""
