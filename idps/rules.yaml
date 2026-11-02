@@ -1,0 +1,282 @@
+# SentinelGate IDPS signature rules.
+# Each rule: id, name, attack_type, pattern (regex), targets, severity, mitre_id.
+# Targets: path, query, body, headers, user_agent
+
+rules:
+  # --- SQL injection ---
+  - id: sqli_union_select
+    name: UNION SELECT
+    attack_type: sqli
+    pattern: (?i)union\s+(all\s+)?select
+    targets: [path, query, body]
+    severity: high
+    mitre_id: T1190
+
+  - id: sqli_or_1eq1
+    name: OR 1=1
+    attack_type: sqli
+    pattern: (?i)or\s+1\s*=\s*1
+    targets: [query, body]
+    severity: high
+    mitre_id: T1190
+
+  - id: sqli_sleep
+    name: SLEEP()
+    attack_type: sqli
+    pattern: (?i)sleep\s*\(
+    targets: [query, body]
+    severity: high
+    mitre_id: T1190
+
+  - id: sqli_benchmark
+    name: BENCHMARK()
+    attack_type: sqli
+    pattern: (?i)benchmark\s*\(
+    targets: [query, body]
+    severity: high
+    mitre_id: T1190
+
+  - id: sqli_comment
+    name: SQL inline comment
+    attack_type: sqli
+    pattern: (?i)(--|#|/\*)
+    targets: [query, body]
+    severity: medium
+    mitre_id: T1190
+
+  - id: sqli_stacked
+    name: Stacked queries
+    attack_type: sqli
+    pattern: (?i);\s*(drop|insert|update|delete|select|create|alter)\b
+    targets: [query, body]
+    severity: critical
+    mitre_id: T1190
+
+  - id: sqli_information_schema
+    name: information_schema access
+    attack_type: sqli
+    pattern: (?i)information_schema
+    targets: [query, body]
+    severity: high
+    mitre_id: T1190
+
+  # --- XSS ---
+  - id: xss_script
+    name: Script tag
+    attack_type: xss
+    pattern: (?i)<script
+    targets: [path, query, body]
+    severity: high
+    mitre_id: T1190
+
+  - id: xss_event_handler
+    name: Event handler attribute
+    attack_type: xss
+    pattern: (?i)on\w+\s*=
+    targets: [query, body]
+    severity: high
+    mitre_id: T1190
+
+  - id: xss_img_onerror
+    name: IMG onerror
+    attack_type: xss
+    pattern: (?i)<img[^>]*onerror
+    targets: [query, body]
+    severity: high
+    mitre_id: T1190
+
+  - id: xss_javascript_uri
+    name: "javascript: URI"
+    attack_type: xss
+    pattern: '(?i)javascript\s*:'
+    targets: [path, query, body]
+    severity: medium
+    mitre_id: T1190
+  # --- Path traversal ---
+  - id: traversal_dotdot
+    name: ../ traversal
+    attack_type: path_traversal
+    pattern: \.\./
+    targets: [path, query]
+    severity: high
+    mitre_id: T1595
+
+  - id: traversal_urlencoded
+    name: URL-encoded .. traversal
+    attack_type: path_traversal
+    pattern: (?i)%2e%2e
+    targets: [path, query]
+    severity: high
+    mitre_id: T1595
+
+  - id: traversal_etc_passwd
+    name: /etc/passwd access
+    attack_type: path_traversal
+    pattern: (?i)/etc/passwd
+    targets: [path, query]
+    severity: critical
+    mitre_id: T1595
+
+  - id: traversal_absolute
+    name: Absolute /etc path
+    attack_type: path_traversal
+    pattern: (?i)^/etc/
+    targets: [path]
+    severity: high
+    mitre_id: T1595
+
+  # --- Command injection ---
+  - id: cmd_semicolon
+    name: Command separator ;
+    attack_type: command_injection
+    pattern: ;\s*(cat|ls|ps|whoami|id|uname|curl|wget)\b
+    targets: [query, body]
+    severity: critical
+    mitre_id: T1059
+
+  - id: cmd_pipe
+    name: Pipe |
+    attack_type: command_injection
+    pattern: \|\s*(cat|ls|ps|whoami|id|uname|curl|wget)\b
+    targets: [query, body]
+    severity: critical
+    mitre_id: T1059
+
+  - id: cmd_and
+    name: Command AND &&
+    attack_type: command_injection
+    pattern: '&&\s*(cat|ls|ps|whoami|id|uname|curl|wget)\b'
+    targets: [query, body]
+    severity: critical
+    mitre_id: T1059
+
+  - id: cmd_backtick
+    name: Backtick command substitution
+    attack_type: command_injection
+    pattern: '`'
+    targets: [query, body]
+    severity: critical
+    mitre_id: T1059
+
+  - id: cmd_dollar_paren
+    name: $( ) command substitution
+    attack_type: command_injection
+    pattern: \$\(
+    targets: [query, body]
+    severity: critical
+    mitre_id: T1059
+
+  # --- SSRF ---
+  - id: ssrf_metadata
+    name: Cloud metadata IP
+    attack_type: ssrf
+    pattern: 169\.254\.169\.254
+    targets: [path, query, body]
+    severity: critical
+    mitre_id: T1190
+
+  - id: ssrf_localhost
+    name: localhost in parameter
+    attack_type: ssrf
+    pattern: (?i)localhost
+    targets: [query, body]
+    severity: medium
+    mitre_id: T1190
+
+  - id: ssrf_local_ip
+    name: 127.0.0.1 in parameter
+    attack_type: ssrf
+    pattern: 127\.0\.0\.1
+    targets: [path, query, body]
+    severity: medium
+    mitre_id: T1190
+
+  # --- Bad user agents (scanners) ---
+  - id: ua_sqlmap
+    name: sqlmap user agent
+    attack_type: bad_user_agent
+    pattern: (?i)sqlmap
+    targets: [user_agent]
+    severity: high
+    mitre_id: T1595
+
+  - id: ua_nikto
+    name: nikto user agent
+    attack_type: bad_user_agent
+    pattern: (?i)nikto
+    targets: [user_agent]
+    severity: high
+    mitre_id: T1595
+
+  - id: ua_nmap
+    name: nmap user agent
+    attack_type: bad_user_agent
+    pattern: (?i)nmap
+    targets: [user_agent]
+    severity: medium
+    mitre_id: T1595
+
+  - id: ua_masscan
+    name: masscan user agent
+    attack_type: bad_user_agent
+    pattern: (?i)masscan
+    targets: [user_agent]
+    severity: medium
+    mitre_id: T1595
+
+  - id: ua_dirbuster
+    name: dirbuster user agent
+    attack_type: bad_user_agent
+    pattern: (?i)dirbuster
+    targets: [user_agent]
+    severity: medium
+    mitre_id: T1595
+
+  - id: ua_gobuster
+    name: gobuster user agent
+    attack_type: bad_user_agent
+    pattern: (?i)gobuster
+    targets: [user_agent]
+    severity: medium
+    mitre_id: T1595
+
+  # --- Scanner paths ---
+  - id: scan_env
+    name: .env file access
+    attack_type: scanner_path
+    pattern: (?i)/\.env\b
+    targets: [path]
+    severity: high
+    mitre_id: T1595
+
+  - id: scan_wp_admin
+    name: /wp-admin access
+    attack_type: scanner_path
+    pattern: (?i)/wp-admin
+    targets: [path]
+    severity: medium
+    mitre_id: T1595
+
+  - id: scan_git
+    name: .git directory access
+    attack_type: scanner_path
+    pattern: (?i)/\.git
+    targets: [path]
+    severity: high
+    mitre_id: T1595
+
+  - id: scan_phpmyadmin
+    name: /phpmyadmin access
+    attack_type: scanner_path
+    pattern: (?i)/phpmyadmin
+    targets: [path]
+    severity: medium
+    mitre_id: T1595
+
+  - id: scan_server_status
+    name: /server-status access
+    attack_type: scanner_path
+    pattern: (?i)/server-status
+    targets: [path]
+    severity: medium
+    mitre_id: T1595

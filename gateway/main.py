@@ -20,6 +20,7 @@ from fastapi.responses import Response
 
 from gateway.logger import log_event
 from gateway.ratelimit import rate_limit_middleware
+from idps.engine import Engine
 
 TARGET_URL = "http://127.0.0.1:5000"
 LOG_PATH = "logs/requests.jsonl"
@@ -37,12 +38,14 @@ HOP_BY_HOP = {
 }
 
 _client: httpx.AsyncClient | None = None
+_idps: Engine | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _client  # noqa: PLW0603
+    global _client, _idps  # noqa: PLW0603
     _client = httpx.AsyncClient(timeout=httpx.Timeout(REQUEST_TIMEOUT))
+    _idps = Engine()
     yield
     await _client.aclose()
 
@@ -87,6 +90,54 @@ async def proxy(request: Request, path: str):
     user_agent = headers.get("user-agent", "")
     query = str(request.url.query)
 
+    # --- IDPS inspection ---
+    rule_hit = ""
+    attack_type = ""
+    action = "allow"
+    if _idps is not None:
+        hits = _idps.inspect(
+            method=request.method,
+            path=f"/{path}",
+            query=query,
+            headers=dict(request.headers),
+            body=body.decode(errors="replace"),
+        )
+        if hits:
+            severity_order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+            max_severity = max(
+                hits, key=lambda h: severity_order.get(h["severity"], 0)
+            )["severity"]
+            rule_hit = ",".join(h["id"] for h in hits)
+            attack_type = hits[0]["attack_type"]
+            if max_severity in ("critical", "high"):
+                action = "block"
+                latency_ms = (time.perf_counter() - start) * 1000.0
+                log_event(
+                    LOG_PATH,
+                    {
+                        "timestamp": datetime.now().astimezone().isoformat(),
+                        "source_ip": source_ip,
+                        "method": request.method,
+                        "path": f"/{path}",
+                        "query": query,
+                        "status": 403,
+                        "user_agent": user_agent,
+                        "latency_ms": round(latency_ms, 3),
+                        "rule_hit": rule_hit,
+                        "attack_type": attack_type,
+                        "ml_score": 0.0,
+                        "cvss_score": 0.0,
+                        "risk_score": 0.0,
+                        "action": "block",
+                        "source": "gateway",
+                    },
+                )
+                return Response(
+                    status_code=403,
+                    content="blocked by IDPS",
+                    headers={"X-Request-ID": request_id},
+                )
+
     status = 200
     upstream_content = b""
     upstream = None
@@ -117,12 +168,12 @@ async def proxy(request: Request, path: str):
         "status": status,
         "user_agent": user_agent,
         "latency_ms": round(latency_ms, 3),
-        "rule_hit": "",
-        "attack_type": "",
+        "rule_hit": rule_hit,
+        "attack_type": attack_type,
         "ml_score": 0.0,
         "cvss_score": 0.0,
         "risk_score": 0.0,
-        "action": "allow",
+        "action": action,
         "source": "gateway",
     }
     log_event(LOG_PATH, event)
