@@ -19,6 +19,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 
 from gateway.logger import log_event
+from gateway.ratelimit import rate_limit_middleware
 
 TARGET_URL = "http://127.0.0.1:5000"
 LOG_PATH = "logs/requests.jsonl"
@@ -47,6 +48,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    return await rate_limit_middleware(request, call_next)
 
 
 @app.get("/health")

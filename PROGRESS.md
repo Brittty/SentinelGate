@@ -13,15 +13,14 @@
 - Test result: 7 passed; ruff clean
 - Commit: "Phase 0: Foundation"
 
-## Phase 1: Test app and gateway proxy — DONE
+## Phase 2: Rate limiting — DONE
 - Files:
-  - testapp/app.py — Flask on port 5000: /, /search?q= (reflects), /login POST (no lockout), /file?name= (reads ./testapp/files), /admin; "DELIBERATELY VULNERABLE" banner; testapp/files/sample.txt
-  - gateway/main.py — FastAPI catch-all proxy to TARGET_URL via shared httpx.AsyncClient (lifespan-managed); forwards method/path/query/headers (minus hop-by-hop)+body; returns upstream status/headers/body; 502 on ConnectError, 504 on TimeoutException; /health; X-Request-ID header; logs one JSONL event per request
-  - gateway/logger.py — append_jsonl to logs/requests.jsonl; sanitizes control chars/newlines; per-field cap (MAX_FIELD=2048); creates directories
-  - tests/test_gateway.py — 200 passthrough, body forwarding, /health, 502 on connect error, 504 on timeout (httpx.MockTransport)
-  - tests/test_logger.py — JSON line format, sanitization, field cap, directory creation
-- Test result: 16 passed (7 schema + 4 logger + 5 gateway); ruff clean
-- Commit: "Phase 1: Test app and gateway proxy"
+  - gateway/ratelimit.py — `RateLimiter` ABC; `InMemoryTokenBucket` (rate/burst from .env RATE_LIMIT/RATE_BURST, defaults 60/min, burst 20); per-IP buckets in OrderedDict with LRU eviction (max 10k); BanStore with expiry; allowlist; `client_ip()` (socket peername; XFF first entry only if TRUST_PROXY=true); `rate_limit_middleware` (allowlist/ban check → token bucket → 429 with Retry-After, logs action=throttle)
+  - gateway/main.py — added `@app.middleware("http")` calling rate_limit_middleware before routing
+  - tests/test_ratelimit.py — 9 tests: refill, burst, 429+retry_after, ban expiry, allowlist never blocked, LRU eviction, client IP (socket/XFF/trust proxy), ban/unban
+- Hook: middleware runs before IDPS/proxy; throttled requests return 429 + Retry-After and log action=throttle
+- Test result: 24 passed (16 phase 1 + 8 phase 2); ruff clean
+- Commit: "Phase 2: Rate limiting"
 
 ## Notes / blockers
 - requirements.txt pins (fastapi<0.116, uvicorn<0.33, scikit-learn<1.7) too strict for Python 3.14; newer versions installed. Will loosen pins when rewriting requirements.txt after dependency survey.
