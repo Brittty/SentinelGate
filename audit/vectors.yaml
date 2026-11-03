@@ -1,0 +1,72 @@
+# CVSS v3.1 vectors for attack types and security findings.
+# Each maps to a base vector string that cvss library can parse.
+
+attack_types:
+  sqli:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+    description: "SQL injection - critical data breach risk"
+
+  xss:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+    description: "Cross-site scripting"
+
+  command_injection:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+    description: "Command injection - remote code execution"
+
+  path_traversal:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+    description: "Path traversal - file disclosure"
+
+  ssrf:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:L/A:N"
+    description: "Server-side request forgery"
+
+  brute_force:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
+    description: "Brute force authentication attack"
+
+  dos:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+    description: "Denial of service"
+
+  scanner:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+    description: "Active reconnaissance/scanning"
+
+findings:
+  missing_hsts:
+    vector: "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N"
+    description: "Missing HSTS header"
+
+  missing_csp:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+    description: "Missing Content-Security-Policy"
+
+  missing_x_frame:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N"
+    description: "Missing X-Frame-Options (clickjacking risk)"
+
+  weak_tls:
+    vector: "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+    description: "Weak TLS configuration"
+
+  expired_cert:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N"
+    description: "Expired SSL/TLS certificate"
+
+  open_port:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+    description: "Unexpected open port"
+
+  vulnerable_dependency:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    description: "Known vulnerable dependency (high severity default)"
+
+  code_quality:
+    vector: "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N"
+    description: "Code quality issue (Bandit finding)"
+
+  insecure_cookie:
+    vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N"
+    description: "Cookie without Secure or HttpOnly flags"
