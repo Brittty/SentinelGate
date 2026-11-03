@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  testapp:
+    build: .
+    command: python -m testapp.app
+    ports:
+      - "5000:5000"
+    networks:
+      - sentinelgate
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  gateway:
+    build: .
+    command: python -m uvicorn gateway.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - testapp
+    environment:
+      - TARGET_URL=http://testapp:5000
+      - DB_PATH=/app/logs/siem.db
+      - RATE_LIMIT=60
+      - RATE_BURST=20
+    volumes:
+      - ./logs:/app/logs
+      - ./models:/app/models
+    networks:
+      - sentinelgate
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  collector:
+    build: .
+    command: python -m siem.collector --follow
+    depends_on:
+      - gateway
+    environment:
+      - DB_PATH=/app/logs/siem.db
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - sentinelgate
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    command: streamlit run dashboard/app.py --server.port=8501 --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+    depends_on:
+      - collector
+    environment:
+      - DASHBOARD_PASSWORD=admin
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - sentinelgate
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - sentinelgate
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+    networks:
+      - sentinelgate
+
+networks:
+  sentinelgate:
+    driver: bridge
+
+volumes:
+  redis-data:
