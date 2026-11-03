@@ -23,6 +23,16 @@
 - Test result: 48 passed total; ruff clean
 - Commit: "Phase 3: IDPS signature engine"
 
+## Phase 4: SIEM storage, parsing, correlation — DONE
+- Files:
+  - siem/storage.py — Store class wrapping SQLite in WAL mode; tables: events, alerts, blocklist, kv; parameterized queries; indexes on source_ip and timestamp
+  - siem/parsers.py — parse_auth_log (Linux auth.log Failed password / Invalid user), parse_nginx_combined (nginx combined log format)
+  - siem/correlation.py + siem/correlation.yaml — brute_force, scan, injection_burst, multi_stage rules; de-duplication against existing alerts
+  - siem/collector.py — tail logs/requests.jsonl, resume by byte offset stored in kv; CLI with --follow flag
+  - tests/test_siem.py — 12 tests: storage (events, alerts, blocklist, kv), parsers (auth.log, nginx), correlation (all 4 rules + dedup), collector (resume)
+- Test result: 12 passed; ruff clean
+- Commit: "Phase 4: SIEM storage, parsing, correlation"
+
 ## Notes / blockers
 - requirements.txt pins (fastapi<0.116, uvicorn<0.33, scikit-learn<1.7) too strict for Python 3.14; newer versions installed. Will loosen pins when rewriting requirements.txt after dependency survey.
 - scikit-learn 1.6.1 fails to build from source on cp314 (no wheel); ML (Phase 5) will degrade gracefully if unavailable.

@@ -1,0 +1,35 @@
+# SentinelGate correlation rules.
+# Each rule: id, name, mitre_id, severity, window_seconds, threshold, description
+
+rules:
+  - id: brute_force
+    name: Brute force login attempts
+    mitre_id: T1110
+    severity: high
+    window_seconds: 60
+    threshold: 5
+    description: 5+ 401/403 responses on /login from one IP in 60 seconds
+
+  - id: scan
+    name: Active scanning / 404 burst
+    mitre_id: T1595
+    severity: medium
+    window_seconds: 60
+    threshold: 10
+    description: 10+ distinct 404 paths from one IP in 60 seconds
+
+  - id: injection_burst
+    name: Injection burst
+    mitre_id: T1190
+    severity: high
+    window_seconds: 60
+    threshold: 5
+    description: 5+ IDPS rule hits (sqli/xss/command_injection) from one IP in 60 seconds
+
+  - id: multi_stage
+    name: Multi-stage attack (scan then injection)
+    mitre_id: T1190
+    severity: critical
+    window_seconds: 600
+    threshold: 1
+    description: Scan activity followed by injection within 10 minutes raises severity
