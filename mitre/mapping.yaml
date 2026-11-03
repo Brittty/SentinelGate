@@ -1,0 +1,64 @@
+# MITRE ATT&CK mapping for SentinelGate detection rules.
+# Maps attack patterns to tactics and techniques.
+
+mappings:
+  T1110:
+    name: Brute Force
+    tactic: Credential Access
+    description: Adversary trying to guess credentials through brute force
+    detection_rules:
+      - brute_force
+    severity: high
+
+  T1190:
+    name: Exploit Public-Facing Application
+    tactic: Initial Access
+    description: Adversary attempting to exploit vulnerabilities in web applications
+    detection_rules:
+      - sqli
+      - xss
+      - command_injection
+      - injection_burst
+      - multi_stage
+    severity: critical
+
+  T1595:
+    name: Active Scanning
+    tactic: Reconnaissance
+    description: Adversary probing infrastructure to gather information
+    detection_rules:
+      - scan
+      - scanner_user_agent
+    severity: medium
+
+  T1059:
+    name: Command and Scripting Interpreter
+    tactic: Execution
+    description: Adversary executing commands through interpreters
+    detection_rules:
+      - command_injection
+    severity: critical
+
+  T1499:
+    name: Endpoint Denial of Service
+    tactic: Impact
+    description: Adversary attempting to make services unavailable
+    detection_rules:
+      - dos
+    severity: high
+
+  T1071:
+    name: Application Layer Protocol
+    tactic: Command and Control
+    description: Adversary using application layer protocols for C2
+    detection_rules:
+      - ssrf
+    severity: medium
+
+  T1083:
+    name: File and Directory Discovery
+    tactic: Discovery
+    description: Adversary enumerating files and directories
+    detection_rules:
+      - path_traversal
+    severity: medium

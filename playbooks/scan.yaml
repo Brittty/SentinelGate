@@ -1,0 +1,47 @@
+# Automated response playbook: Active Scanning
+# Triggered when scan correlation alert fires
+
+name: scan_response
+description: Respond to active reconnaissance/scanning
+trigger:
+  alert_rule: scan
+  severity: medium
+steps:
+  - name: Throttle scanner
+    action: throttle
+    params:
+      duration_minutes: 15
+      reason: "Active scanning detected"
+    approve: false
+
+  - name: Log scan pattern
+    action: extract_scan_pattern
+    params:
+      max_paths: 50
+    approve: false
+
+  - name: Check reputation
+    action: enrich
+    params:
+      source: abuseipdb
+    approve: false
+
+  - name: Escalate if known attacker
+    action: conditional_escalate
+    params:
+      condition: "reputation > 0.7"
+      escalate_to: temp_ban
+    approve: true
+
+  - name: Notify SOC
+    action: telegram_alert
+    params:
+      severity: medium
+    approve: false
+
+  - name: Track in case management
+    action: create_case
+    params:
+      title: "Scanning activity from {ip}"
+      severity: medium
+    approve: false

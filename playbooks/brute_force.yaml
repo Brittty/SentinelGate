@@ -1,0 +1,48 @@
+# Automated response playbook: Brute Force Attack
+# Triggered when brute_force correlation alert fires
+
+name: brute_force_response
+description: Respond to brute force login attempts
+trigger:
+  alert_rule: brute_force
+  severity: high
+steps:
+  - name: Enrich IP reputation
+    action: enrich
+    params:
+      source: abuseipdb
+    approve: false
+
+  - name: Analyze risk
+    action: calculate_risk
+    params:
+      ml_enabled: true
+    approve: false
+
+  - name: Contain attacker
+    action: temp_ban
+    params:
+      duration_hours: 24
+      reason: "Brute force attack detected"
+    approve: true
+
+  - name: Notify SOC
+    action: telegram_alert
+    params:
+      severity: high
+      include_evidence: true
+    approve: false
+
+  - name: Create case
+    action: create_case
+    params:
+      title: "Brute force attack from {ip}"
+      severity: high
+      assign_to: "soc-team"
+    approve: false
+
+  - name: Document in audit log
+    action: audit_log
+    params:
+      entry_type: "playbook_execution"
+    approve: false

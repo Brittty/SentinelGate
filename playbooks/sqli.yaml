@@ -1,0 +1,53 @@
+# Automated response playbook: SQL Injection
+# Triggered when SQLi detection occurs
+
+name: sqli_response
+description: Respond to SQL injection attempts
+trigger:
+  attack_type: sqli
+  severity: critical
+steps:
+  - name: Immediate block
+    action: permanent_block
+    params:
+      reason: "SQL injection attempt"
+    approve: true
+
+  - name: Enrich threat intel
+    action: enrich
+    params:
+      source: abuseipdb
+    approve: false
+
+  - name: Extract payload
+    action: extract_payload
+    params:
+      fields: ["query", "body"]
+    approve: false
+
+  - name: Check for data exfiltration
+    action: analyze_response
+    params:
+      check_sensitive_data: true
+    approve: false
+
+  - name: Alert security team
+    action: telegram_alert
+    params:
+      severity: critical
+      priority: urgent
+    approve: false
+
+  - name: Create high-priority case
+    action: create_case
+    params:
+      title: "SQL injection from {ip}"
+      severity: critical
+      assign_to: "security-lead"
+    approve: false
+
+  - name: Audit and log
+    action: audit_log
+    params:
+      entry_type: "critical_incident"
+    approve: false
