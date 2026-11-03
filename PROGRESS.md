@@ -65,9 +65,32 @@
 - Mermaid architecture diagram, feature list, testing guide, responsible use notice
 - Commit: "Phase 15: Core documentation (partial)"
 
-## Summary — 10 of 16 phases completed
-**COMPLETED PHASES:** 0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 15 (partial)
-**REMAINING PHASES:** 8 (SOC features), 11 (Suricata/Wazuh), 12 (Reports), 13 (Landing page), 14 (Docker/CI), 16 (Security review)
+## Phase 8: SOC features — DONE
+- Files: cases/manager.py, mitre/mapper.py + mapping.yaml, intel/enrich.py, playbooks/*.yaml + runner.py
+- Case management with timeline, MITRE ATT&CK mapping, AbuseIPDB reputation enrichment, playbook automation
+- Test result: 9 passed; ruff clean
+- Commit: "Phase 8: SOC features (cases, MITRE, intel, playbooks)"
+
+## Phase 11: Suricata and Wazuh integrations — DONE
+- Files: siem/suricata.py, siem/wazuh.py, docs/integrations.md
+- Suricata eve.json parser, Wazuh API polling, complete integration documentation
+- Test result: 6 passed; ruff clean
+- Commit: "Phase 11: Suricata and Wazuh integrations"
+
+## Phase 12: PDF report generation — DONE
+- Files: reports/incident.py, reports/audit_report.py
+- ReportLab PDF generation for incident and audit reports with CVSS scores, timelines, recommendations
+- Test result: 5 passed (reportlab available); ruff clean
+- Commit: "Phase 12: PDF report generation"
+
+## Phase 14: Docker, CI, packaging — DONE
+- Files: Dockerfile (multi-stage, non-root), docker-compose.yml (6 services), .github/workflows/ci.yml, tasks.ps1
+- Complete containerization, GitHub Actions CI, PowerShell task automation
+- Commit: "Phase 14: Docker, CI, and task automation"
+
+## Summary — 14 of 16 phases completed
+**COMPLETED PHASES:** 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15 (partial)
+**REMAINING PHASES:** 13 (Landing page), 16 (Security review)
 
 ## Test Results
 - **Total tests:** 126 passed, 2 skipped
