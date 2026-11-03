@@ -6,7 +6,8 @@ Runs bandit in JSON mode and returns findings.
 from __future__ import annotations
 
 import json
-import subprocess
+import shutil
+import subprocess  # nosec B404
 from typing import Any
 
 
@@ -16,10 +17,21 @@ def scan_code(path: str = ".", timeout: float = 60.0) -> list[dict[str, Any]]:
     Returns a list of finding dicts or an error dict if bandit unavailable.
     """
     findings = []
+    bandit = shutil.which("bandit")
+    if bandit is None:
+        return [
+            {
+                "type": "tool_unavailable",
+                "title": "bandit not installed",
+                "evidence": "bandit binary not found",
+                "remediation": "Install bandit: pip install bandit",
+            }
+        ]
 
     try:
-        result = subprocess.run(
-            ["bandit", "-r", path, "-f", "json", "-q"],
+        # Arguments are fixed flags plus a local path; nothing is shell-expanded.
+        result = subprocess.run(  # noqa: S603  # nosec B603
+            [bandit, "-r", path, "-f", "json", "-q"],
             capture_output=True,
             text=True,
             timeout=timeout,

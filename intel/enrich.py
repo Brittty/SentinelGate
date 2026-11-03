@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import time
-from typing import Any
+from http import HTTPStatus
 
 import requests
 
@@ -67,7 +67,7 @@ class ReputationClient:
             resp = requests.get(
                 ABUSEIPDB_URL, headers=headers, params=params, timeout=TIMEOUT
             )
-            if resp.status_code == 200:
+            if resp.status_code == HTTPStatus.OK:
                 data = resp.json()
                 abuse_score = data.get("data", {}).get("abuseConfidenceScore", 0)
                 is_public = data.get("data", {}).get("isPublic", True)

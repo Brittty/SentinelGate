@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.12', '3.13']
+        python-version: ['3.12', '3.13', '3.14']
 
     steps:
     - uses: actions/checkout@v4
@@ -62,12 +62,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install bandit pip-audit
+        pip install -r requirements.txt bandit pip-audit
 
     - name: Run Bandit security scan
       run: |
-        python -m bandit -r . -f json -o bandit-report.json || true
-        python -m bandit -r . -q
+        python -m bandit -r gateway idps siem ml audit response cases mitre intel playbooks reports simulator testapp dashboard -f json -o bandit-report.json || true
+        python -m bandit -r gateway idps siem ml audit response cases mitre intel playbooks reports simulator testapp dashboard -q
 
     - name: Run pip-audit
       run: |

@@ -65,7 +65,6 @@ def run_playbook(
     for step in steps:
         step_name = step.get("name", "unnamed")
         action = step.get("action", "")
-        params = step.get("params", {})
         approve = step.get("approve", False)
 
         # Log step to audit chain

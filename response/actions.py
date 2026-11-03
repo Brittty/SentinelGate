@@ -7,8 +7,7 @@ to the audit hash chain with actor, reason, and risk breakdown.
 from __future__ import annotations
 
 import os
-import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from audit.hashchain import HashChain
@@ -21,6 +20,11 @@ ALLOWLIST = [ip.strip() for ip in ALLOWLIST if ip.strip()]
 THROTTLE_BAN = 900  # 15 minutes
 TEMP_BAN = 86400  # 24 hours
 PERMANENT_BAN = 86400 * 365 * 10  # 10 years
+
+# Risk thresholds that trigger the next step of the escalation ladder
+ESCALATE_TO_THROTTLE = 60.0
+ESCALATE_TO_TEMP_BAN = 70.0
+ESCALATE_TO_PERMANENT = 85.0
 
 
 def is_allowlisted(ip: str) -> bool:
@@ -43,7 +47,7 @@ def throttle(
     if is_allowlisted(ip):
         return {"success": False, "message": f"IP {ip} is allowlisted"}
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     banned_until = now.timestamp() + THROTTLE_BAN
 
     store.upsert_blocklist(ip, banned_until, f"throttle: {reason}", now.isoformat())
@@ -76,7 +80,7 @@ def temp_ban(
     if is_allowlisted(ip):
         return {"success": False, "message": f"IP {ip} is allowlisted"}
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     banned_until = now.timestamp() + TEMP_BAN
 
     store.upsert_blocklist(ip, banned_until, f"temp_ban: {reason}", now.isoformat())
@@ -108,7 +112,7 @@ def permanent_block(
     if is_allowlisted(ip):
         return {"success": False, "message": f"IP {ip} is allowlisted"}
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     banned_until = now.timestamp() + PERMANENT_BAN
 
     store.upsert_blocklist(ip, banned_until, f"permanent: {reason}", now.isoformat())
@@ -136,7 +140,7 @@ def unblock(
     actor: str = "admin",
 ) -> dict[str, Any]:
     """Unblock an IP by removing it from the blocklist."""
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
 
     # Set banned_until to now (expired)
     store.upsert_blocklist(ip, now.timestamp(), f"unblocked: {reason}", now.isoformat())
@@ -166,11 +170,22 @@ def escalate_action(
 
     Ladder: throttle -> temp_ban -> permanent_block
     """
-    if current_action == "allow" and risk_score >= 60.0:
+    if current_action == "allow" and risk_score >= ESCALATE_TO_THROTTLE:
         return throttle(ip, f"risk {risk_score}", risk_breakdown, store, chain)
-    elif current_action == "throttle" and risk_score >= 70.0:
-        return temp_ban(ip, f"escalated from throttle, risk {risk_score}", risk_breakdown, store, chain)
-    elif current_action == "temp_ban" and risk_score >= 85.0:
-        return permanent_block(ip, f"escalated from temp_ban, risk {risk_score}", risk_breakdown, store, chain)
-    else:
-        return {"success": False, "message": "No escalation needed"}
+    if current_action == "throttle" and risk_score >= ESCALATE_TO_TEMP_BAN:
+        return temp_ban(
+            ip,
+            f"escalated from throttle, risk {risk_score}",
+            risk_breakdown,
+            store,
+            chain,
+        )
+    if current_action == "temp_ban" and risk_score >= ESCALATE_TO_PERMANENT:
+        return permanent_block(
+            ip,
+            f"escalated from temp_ban, risk {risk_score}",
+            risk_breakdown,
+            store,
+            chain,
+        )
+    return {"success": False, "message": "No escalation needed"}

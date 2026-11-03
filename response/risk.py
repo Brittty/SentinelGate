@@ -9,9 +9,10 @@ from __future__ import annotations
 import time
 from typing import Any
 
-
 # Risk formula: risk = 100 * (0.3*ml_score + 0.3*rule_score + 0.2*reputation + 0.2*cvss/10)
-# Thresholds: >=40 alert, >=60 throttle, >=80 block
+ALERT_THRESHOLD = 40.0
+THROTTLE_THRESHOLD = 60.0
+BLOCK_THRESHOLD = 80.0
 
 
 def calculate_risk(
@@ -54,13 +55,13 @@ def calculate_risk(
     # Determine action based on thresholds
     action = "allow"
     threshold_met = "none"
-    if risk >= 80.0:
+    if risk >= BLOCK_THRESHOLD:
         action = "block"
         threshold_met = "block"
-    elif risk >= 60.0:
+    elif risk >= THROTTLE_THRESHOLD:
         action = "throttle"
         threshold_met = "throttle"
-    elif risk >= 40.0:
+    elif risk >= ALERT_THRESHOLD:
         action = "alert"
         threshold_met = "alert"
 

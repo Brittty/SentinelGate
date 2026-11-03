@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SentinelGate - Open-source self-defending security gateway combining IDPS, SIEM, ML anomaly detection, and automated response.">
+    <title>SentinelGate - Self-Defending Security Gateway</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400&family=Newsreader:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%235B4FD0'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='%23EEF2FF'%3E🛡️%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+    <!-- Skip to content link for accessibility -->
+    <a href="#main" class="skip-link">Skip to main content</a>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <div class="nav-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                </svg>
+                <span>SentinelGate</span>
+            </div>
+            <div class="nav-links" id="primary-navigation">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How it works</a>
+                <a href="http://localhost:8501" target="_blank">Dashboard</a>
+                <a href="../docs/deployment.md">Docs</a>                    <a href="#roadmap">Roadmap</a>
+            </div>
+            <div class="nav-buttons">
+                <a href="../README.md" class="btn btn-ghost">Source</a>
+                <a href="http://localhost:8501" class="btn btn-solid" target="_blank">Launch Dashboard</a>
+            </div>
+            <button class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primary-navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="main">
+        <canvas id="particles" aria-hidden="true"></canvas>
+        <div class="hero-content">
+            <div class="hero-label">OPEN-SOURCE SECURITY GATEWAY</div>
+            <h1 class="hero-title">Change your <span class="hero-emphasis">perception</span> of security</h1>
+            <p class="hero-subtitle">
+                SentinelGate watches every request, scores the risk with machine learning and CVSS,
+                and contains attackers automatically. IDPS, SIEM, rate limiting and audit in one gateway.
+            </p>
+            <div class="hero-buttons">
+                <a href="http://localhost:8501" class="btn btn-solid" target="_blank">Launch Dashboard</a>
+                <a href="../README.md" class="btn btn-ghost">View on GitHub</a>
+            </div>
+            <div class="hero-meta">Python 3.12 / MIT License / Runs Locally</div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-value" data-stat="requests">0</div>
+                    <div class="stat-label">Requests Screened</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" data-stat="threats">0</div>
+                    <div class="stat-label">Threats Contained</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" data-stat="latency">0<span class="stat-unit">ms</span></div>
+                    <div class="stat-label">Response Time</div>
+                </div>
+            </div>
+            <div class="hero-note">Simulated</div>
+        </div>
+    </section>
+
+    <!-- Trust Strip -->
+    <section class="trust">
+        <div class="trust-chips">
+            <span class="chip">FastAPI</span>
+            <span class="chip">Suricata</span>
+            <span class="chip">Wazuh</span>
+            <span class="chip">scikit-learn</span>
+            <span class="chip">CVSS 3.1</span>
+            <span class="chip">MITRE ATT&CK</span>
+            <span class="chip">SQLite</span>
+            <span class="chip">Streamlit</span>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="feature-cards">
+                <div class="feature-card">
+                    <div class="feature-tag">DETECT</div>
+                    <h3 class="feature-title">IDPS Signature Engine</h3>
+                    <p class="feature-description">34 rules detecting SQLi, XSS, path traversal, command injection, and scanner activity. Critical/high threats blocked automatically.</p>
+                    <div class="feature-icon" aria-hidden="true">🔍</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-tag">CORRELATE</div>
+                    <h3 class="feature-title">SIEM & Correlation</h3>
+                    <p class="feature-description">Event normalization, storage, and multi-stage attack correlation. Brute force, scanning, injection bursts detected in real time.</p>
+                    <div class="feature-icon" aria-hidden="true">📊</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-tag">CONTAIN</div>
+                    <h3 class="feature-title">Automated Response</h3>
+                    <p class="feature-description">Risk-based throttling, temporary bans, and permanent blocks. Escalation ladder with audit trail for every action.</p>
+                    <div class="feature-icon" aria-hidden="true">🛡️</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how" id="how-it-works">
+        <div class="container">
+            <h2 class="section-title">Every request, five milliseconds.</h2>
+            <ol class="steps">
+                <li class="step">
+                    <span class="step-number">01</span>
+                    <h3 class="step-title">Intercept</h3>
+                    <p class="step-text">A reverse proxy sits in front of your app and inspects each request before it is forwarded.</p>
+                </li>
+                <li class="step">
+                    <span class="step-number">02</span>
+                    <h3 class="step-title">Detect</h3>
+                    <p class="step-text">34 IDPS signatures and an Isolation Forest anomaly score run against the normalized request.</p>
+                </li>
+                <li class="step">
+                    <span class="step-number">03</span>
+                    <h3 class="step-title">Correlate</h3>
+                    <p class="step-text">The SIEM stitches gateway, Suricata, and Wazuh events into multi-stage attack alerts.</p>
+                </li>
+                <li class="step">
+                    <span class="step-number">04</span>
+                    <h3 class="step-title">Contain</h3>
+                    <p class="step-text">The risk score drives throttling, bans, and blocks, and every action lands in a hash-chained audit log.</p>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- Risk Intelligence -->
+    <section class="risk">
+        <div class="container">
+            <div class="risk-visual" aria-hidden="true">
+                <svg viewBox="0 0 200 200" class="risk-gauge">
+                    <circle cx="100" cy="100" r="80" fill="none" stroke="#11122B" stroke-width="8"/>
+                    <circle id="gauge-arc" cx="100" cy="100" r="80" fill="none" stroke="#7FE8FF" stroke-width="8"
+                            stroke-dasharray="502.4" stroke-dashoffset="502.4"
+                            transform="rotate(-90 100 100)" stroke-linecap="round"/>
+                    <text x="100" y="95" text-anchor="middle" font-size="32" fill="#EEF2FF" font-family="IBM Plex Mono">
+                        <tspan id="gauge-value">0</tspan>
+                    </text>
+                    <text x="100" y="115" text-anchor="middle" font-size="14" fill="#8C93B5" font-family="IBM Plex Mono">RISK</text>
+                </svg>
+            </div>
+            <div class="risk-content">
+                <h2 class="section-title">One score. Four signals.</h2>
+                <div class="risk-formula">
+                    <div class="formula-item">
+                        <span class="formula-label">ML Anomaly</span>
+                        <span class="formula-weight">30%</span>
+                    </div>
+                    <div class="formula-item">
+                        <span class="formula-label">Rule Hits</span>
+                        <span class="formula-weight">30%</span>
+                    </div>
+                    <div class="formula-item">
+                        <span class="formula-label">IP Reputation</span>
+                        <span class="formula-weight">20%</span>
+                    </div>
+                    <div class="formula-item">
+                        <span class="formula-label">CVSS Impact</span>
+                        <span class="formula-weight">20%</span>
+                    </div>
+                </div>
+                <div class="risk-formula-text">risk = 100 × (0.3×ML + 0.3×rules + 0.2×rep + 0.2×CVSS/10)</div>
+                <p class="risk-note">Isolation Forest scores each IP's behavior over a 60-second window</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start -->
+    <section class="quickstart" id="quickstart">
+        <div class="container">
+            <h2 class="section-title">Quick Start</h2>
+            <div class="terminal">
+                <div class="terminal-header">
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-title">PowerShell</span>
+                </div>
+                <pre class="terminal-content"><code># Clone repository
+git clone <repository-url> sentinelgate
+cd sentinelgate
+
+# Setup environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+# Configure
+copy .env.example .env
+
+# Run demo
+.\demo.ps1</code></pre>
+                <button class="terminal-copy" aria-label="Copy to clipboard">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="4" y="4" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 2h8v2H4v6H2V2z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="requirements">
+                <h3>Requirements</h3>
+                <ul>
+                    <li>Python 3.12+</li>
+                    <li>8 GB RAM (recommended)</li>
+                    <li>Optional: Docker, Redis, nmap</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Open Source -->
+    <section class="opensource">
+        <div class="container">
+            <h2 class="section-title">Built in the open</h2>
+            <div class="os-cards">
+                <div class="os-card">
+                    <h3>MIT License</h3>
+                    <p>Free to use, modify, and distribute. No restrictions.</p>
+                </div>
+                <div class="os-card">
+                    <h3>Contributing</h3>
+                    <p>Good first issues welcome. See CONTRIBUTING.md for guidelines.</p>
+                </div>
+                <div class="os-card">
+                    <h3>Security</h3>
+                    <p>Responsible disclosure policy. Report vulnerabilities privately.</p>
+                </div>
+            </div>
+            <div class="roadmap" id="roadmap">
+                <h3>Roadmap</h3>
+                <ul class="roadmap-list">
+                    <li class="roadmap-done">✓ Core gateway & IDPS</li>
+                    <li class="roadmap-done">✓ SIEM & correlation</li>
+                    <li class="roadmap-done">✓ ML anomaly detection</li>
+                    <li class="roadmap-done">✓ CVSS audit & hash chain</li>
+                    <li class="roadmap-done">✓ Automated response & playbooks</li>
+                    <li class="roadmap-done">✓ Cases, MITRE ATT&CK & threat intel</li>
+                    <li class="roadmap-done">✓ Suricata & Wazuh integrations</li>
+                    <li class="roadmap-done">✓ PDF incident & audit reports</li>
+                    <li class="roadmap-done">✓ Streamlit dashboard</li>
+                    <li class="roadmap-done">✓ Docker Compose & CI</li>
+                    <li class="roadmap-todo">○ Sigma rule import</li>
+                    <li class="roadmap-todo">○ Redis distributed backend</li>
+                    <li class="roadmap-todo">○ REST API</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Responsible Use -->
+    <section class="responsible">
+        <div class="container">
+            <p class="responsible-text">
+                ⚠️ <strong>Responsible Use Notice:</strong> Run attacks and scans only on systems you own or have written permission to test.
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>GATEWAY</h4>
+                    <a href="#features">Features</a>
+                    <a href="../docs/deployment.md">Deployment</a>
+                    <a href="#quickstart">Quick Start</a>
+                    <a href="../README.md">Documentation</a>
+                </div>
+                <div class="footer-col">
+                    <h4>DETECTION</h4>
+                    <a href="#features">IDPS Rules</a>
+                    <a href="#features">SIEM</a>
+                    <a href="#features">ML Models</a>
+                    <a href="../docs/integrations.md">Integrations</a>
+                </div>
+                <div class="footer-col">
+                    <h4>AUDIT</h4>
+                    <a href="#features">Scanners</a>
+                    <a href="../audit/vectors.yaml">CVSS Vectors</a>
+                    <a href="../docs/deployment.md">Reports</a>
+                    <a href="../SECURITY.md">Security</a>
+                </div>
+                <div class="footer-col">
+                    <h4>RESPONSE</h4>
+                    <a href="#features">Risk Engine</a>
+                    <a href="#features">Playbooks</a>
+                    <a href="#features">Cases</a>
+                    <a href="#features">MITRE ATT&CK</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 SentinelGate Contributors. MIT License.</p>
+                <p class="footer-tagline">Make it true</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script src="particles.js"></script>
+</body>
+</html>

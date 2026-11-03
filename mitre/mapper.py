@@ -5,8 +5,9 @@ Tags detections with MITRE tactics and techniques.
 
 from __future__ import annotations
 
-import yaml
 from typing import Any
+
+import yaml
 
 MAPPING_PATH = "mitre/mapping.yaml"
 

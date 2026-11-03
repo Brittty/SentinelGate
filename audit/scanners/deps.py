@@ -6,7 +6,8 @@ Runs pip-audit in JSON mode and returns findings.
 from __future__ import annotations
 
 import json
-import subprocess
+import shutil
+import subprocess  # nosec B404
 from typing import Any
 
 
@@ -16,10 +17,21 @@ def scan_dependencies(timeout: float = 60.0) -> list[dict[str, Any]]:
     Returns a list of finding dicts or an error dict if pip-audit unavailable.
     """
     findings = []
+    pip_audit = shutil.which("pip-audit")
+    if pip_audit is None:
+        return [
+            {
+                "type": "tool_unavailable",
+                "title": "pip-audit not installed",
+                "evidence": "pip-audit binary not found",
+                "remediation": "Install pip-audit: pip install pip-audit",
+            }
+        ]
 
     try:
-        result = subprocess.run(
-            ["pip-audit", "--format", "json"],
+        # Arguments are fixed flags; nothing is shell-expanded.
+        result = subprocess.run(  # noqa: S603  # nosec B603
+            [pip_audit, "--format", "json"],
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -84,7 +96,11 @@ def scan_dependencies(timeout: float = 60.0) -> list[dict[str, Any]]:
                     "type": "vulnerable_dependency",
                     "title": f"{name} {version} - {vuln_id}",
                     "evidence": description[:200],
-                    "remediation": f"Upgrade to {', '.join(fixed_versions)}" if fixed_versions else "No fix available",
+                    "remediation": (
+                        f"Upgrade to {', '.join(fixed_versions)}"
+                        if fixed_versions
+                        else "No fix available"
+                    ),
                 }
             )
 

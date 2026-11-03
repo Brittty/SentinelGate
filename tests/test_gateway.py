@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 import httpx
 from fastapi.testclient import TestClient
 
@@ -77,3 +79,34 @@ def test_proxy_timeout_returns_504(monkeypatch):
     tc = TestClient(gw.app)
     response = tc.get("/anything")
     assert response.status_code == 504  # noqa: PLR2004
+
+
+def test_record_block_allowlisted_writes_audit_only(tmp_path, monkeypatch):
+    from audit.hashchain import HashChain
+    from gateway import main
+
+    db_path = tmp_path / "gateway.db"
+    monkeypatch.setattr(main, "DB_PATH", str(db_path))
+
+    main._record_block("127.0.0.1", "IDPS high: xss_script", {}, "high")
+
+    conn = sqlite3.connect(db_path)
+    assert conn.execute("SELECT COUNT(*) FROM audit_chain").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM blocklist").fetchone()[0] == 0
+    ok, _ = HashChain(conn).verify()
+    assert ok
+    conn.close()
+
+
+def test_record_block_bans_external_ip(tmp_path, monkeypatch):
+    from gateway import main
+
+    db_path = tmp_path / "gateway.db"
+    monkeypatch.setattr(main, "DB_PATH", str(db_path))
+
+    main._record_block("203.0.113.7", "IDPS critical: sqli", {}, "critical")
+
+    conn = sqlite3.connect(db_path)
+    assert conn.execute("SELECT COUNT(*) FROM audit_chain").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM blocklist").fetchone()[0] == 1
+    conn.close()

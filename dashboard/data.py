@@ -6,7 +6,7 @@ All SQL queries are here, not in the UI code.
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def get_kpi(conn: sqlite3.Connection) -> dict:
@@ -28,7 +28,7 @@ def get_kpi(conn: sqlite3.Connection) -> dict:
     blocked = cursor.fetchone()[0]
 
     # Active bans
-    now = datetime.now(tz=timezone.utc).timestamp()
+    now = datetime.now(tz=UTC).timestamp()
     cursor = conn.execute(
         "SELECT COUNT(*) FROM blocklist WHERE banned_until > ?", (now,)
     )
@@ -79,7 +79,7 @@ def get_alerts(conn: sqlite3.Connection, limit: int = 10) -> list[dict]:
         (limit,),
     )
     columns = [d[0] for d in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
 
 def get_recent_events(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
@@ -96,7 +96,7 @@ def get_recent_events(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
         (limit,),
     )
     columns = [d[0] for d in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
 
 def get_top_attackers(conn: sqlite3.Connection, limit: int = 10) -> list[dict]:
@@ -116,12 +116,12 @@ def get_top_attackers(conn: sqlite3.Connection, limit: int = 10) -> list[dict]:
         (limit,),
     )
     columns = [d[0] for d in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
 
 def get_blocklist(conn: sqlite3.Connection) -> list[dict]:
     """Fetch current blocklist."""
-    now = datetime.now(tz=timezone.utc).timestamp()
+    now = datetime.now(tz=UTC).timestamp()
     cursor = conn.execute(
         """
         SELECT ip, banned_until, reason, created_at
@@ -132,4 +132,4 @@ def get_blocklist(conn: sqlite3.Connection) -> list[dict]:
         (now,),
     )
     columns = [d[0] for d in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]

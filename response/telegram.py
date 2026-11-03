@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import time
+from http import HTTPStatus
 from typing import Any
 
 import requests
@@ -59,7 +60,7 @@ def send_alert(severity: str, title: str, details: dict[str, Any]) -> bool:
 
     try:
         resp = requests.post(url, json=payload, timeout=5.0)
-        if resp.status_code == 200:
+        if resp.status_code == HTTPStatus.OK:
             _last_alert_time = now
             return True
     except requests.RequestException:

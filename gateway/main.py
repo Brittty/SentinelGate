@@ -8,22 +8,29 @@ gateway.logger.
 
 from __future__ import annotations
 
+import os
+import sqlite3
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
 
+from audit.hashchain import HashChain
 from gateway.logger import log_event
 from gateway.ratelimit import rate_limit_middleware
 from idps.engine import Engine
+from response.actions import is_allowlisted, permanent_block, temp_ban
+from response.risk import calculate_risk
+from siem.storage import Store
 
-TARGET_URL = "http://127.0.0.1:5000"
-LOG_PATH = "logs/requests.jsonl"
+TARGET_URL = os.getenv("TARGET_URL", "http://127.0.0.1:5000")
+LOG_PATH = os.getenv("LOG_PATH", "logs/requests.jsonl")
+DB_PATH = os.getenv("DB_PATH", "logs/siem.db")
 REQUEST_TIMEOUT = 10.0
 
 HOP_BY_HOP = {
@@ -50,6 +57,42 @@ async def lifespan(app: FastAPI):
     await _client.aclose()
 
 
+def _record_block(
+    ip: str, reason: str, breakdown: dict[str, Any], severity: str
+) -> None:
+    """Write the block to the blocklist and the audit hash chain.
+
+    Never raises: a persistence failure must not change the proxy response.
+    """
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            store = Store(conn)
+            chain = HashChain(conn)
+            if is_allowlisted(ip):
+                # Allowlisted addresses are never banned, but the block is
+                # still evidence and belongs in the audit trail.
+                chain.append(
+                    {
+                        "action": "block",
+                        "ip": ip,
+                        "reason": reason,
+                        "severity": severity,
+                        "risk_breakdown": breakdown,
+                        "allowlisted": True,
+                        "timestamp": datetime.now(tz=UTC).isoformat(),
+                    }
+                )
+                return
+            action = permanent_block if severity == "critical" else temp_ban
+            action(ip, reason, breakdown, store, chain)
+        finally:
+            conn.close()
+    except (OSError, sqlite3.Error):
+        return
+
+
 app = FastAPI(lifespan=lifespan)
 
 
@@ -69,7 +112,8 @@ async def health() -> dict[str, str]:
 )
 async def proxy(request: Request, path: str):
     """Proxy the request to TARGET_URL and return the upstream response."""
-    assert _client is not None
+    if _client is None:
+        raise RuntimeError("HTTP client not initialized")
     request_id = str(uuid.uuid4())
     start = time.perf_counter()
 
@@ -111,11 +155,18 @@ async def proxy(request: Request, path: str):
             attack_type = hits[0]["attack_type"]
             if max_severity in ("critical", "high"):
                 action = "block"
+                risk = calculate_risk(rule_severity=max_severity)
+                _record_block(
+                    source_ip,
+                    f"IDPS {max_severity}: {rule_hit}",
+                    risk["breakdown"],
+                    max_severity,
+                )
                 latency_ms = (time.perf_counter() - start) * 1000.0
                 log_event(
                     LOG_PATH,
                     {
-                        "timestamp": datetime.now().astimezone().isoformat(),
+                        "timestamp": datetime.now(tz=UTC).isoformat(),
                         "source_ip": source_ip,
                         "method": request.method,
                         "path": f"/{path}",
@@ -127,7 +178,7 @@ async def proxy(request: Request, path: str):
                         "attack_type": attack_type,
                         "ml_score": 0.0,
                         "cvss_score": 0.0,
-                        "risk_score": 0.0,
+                        "risk_score": risk["risk_score"],
                         "action": "block",
                         "source": "gateway",
                     },
@@ -160,7 +211,7 @@ async def proxy(request: Request, path: str):
     latency_ms = (time.perf_counter() - start) * 1000.0
 
     event: dict[str, Any] = {
-        "timestamp": datetime.now().astimezone().isoformat(),
+        "timestamp": datetime.now(tz=UTC).isoformat(),
         "source_ip": source_ip,
         "method": request.method,
         "path": f"/{path}",

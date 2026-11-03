@@ -1,152 +1,81 @@
 # SentinelGate — Progress Log
 
 ## Environment (decisions recorded)
+
 - OS: Windows 11; shell: PowerShell 5.1 (`powershell.exe`; `pwsh` not on PATH)
-- Python: 3.14.7 (target 3.12+); venv at `.venv` (active)
-- git: 2.55.0; Docker Desktop available (optional, off by default)
-- nmap: NOT installed — port scanner/integrations degrade gracefully
-- Network: PyPI reachable but intermittent DNS; scikit-learn has no cp314 wheel (builds fail from source) — ML (Phase 5) will degrade gracefully if unavailable
-- CLAUDE.md: created (project instruction file)
+- Python: 3.14.7; venv at `.venv`; project targets 3.12+
+- git 2.55; Docker Desktop available (optional)
+- nmap: NOT installed — the port scanner returns a `tool_unavailable` finding
+- ML stack: installed and working on cp314 (scikit-learn 1.9.1, numpy 2.5.4,
+  joblib 1.6.0). Dependency bounds were relaxed so a clean install resolves
+  current wheels instead of the old `<1.7` pins that had no cp314 wheel.
 
-## Phase 0: Foundation — DONE
-- Files: CLAUDE.md, .gitignore, pyproject.toml, pytest.ini, requirements.txt; package __init__.py for all modules; siem/schema.py (Event model); tests/conftest.py; tests/test_schema.py
-- Test result: 7 passed; ruff clean
-- Commit: "Phase 0: Foundation"
+## Status: all 16 phases complete
 
-## Phase 3: IDPS signature engine — DONE
-- Files:
-  - idps/rules.yaml — 34 rules across SQLi (7), XSS (4), path traversal (4), command injection (5), SSRF (3), bad user agents (6), scanner paths (5); each with id, name, attack_type, pattern, targets, severity, mitre_id
-  - idps/engine.py — Engine class: loads/compiles rules, _normalize (URL-decode up to 2 passes, lowercase, null byte→space), per-request 5ms time budget, never raises, returns hits list
-  - gateway/main.py — IDPS integrated before proxy: critical/high → 403 blocked; medium/low → tag and allow with rule_hit/attack_type in event
-  - tests/test_idps.py — 32 tests: 3+ malicious + 3+ benign per category incl. encoded evasions; false-positive check; null byte stripping; engine never raises
-- Hook: IDPS runs after rate limiting, before proxy; blocks critical/high with 403
-- Test result: 48 passed total; ruff clean
-- Commit: "Phase 3: IDPS signature engine"
+| Phase | Result | Key artifacts |
+| ----- | ------ | ------------- |
+| 0 Foundation | Done | `CLAUDE.md`, `pyproject.toml`, `siem/schema.py`, fixtures |
+| 1 Gateway + test app | Done | `gateway/main.py`, `testapp/app.py` |
+| 2 Rate limiting | Done | `gateway/ratelimit.py` (token bucket, bans, allowlist) |
+| 3 IDPS | Done | `idps/rules.yaml` (34 rules), `idps/engine.py` |
+| 4 SIEM | Done | `siem/storage.py`, `parsers.py`, `correlation.py`, `collector.py` |
+| 5 ML detection | Done | `ml/features.py`, `train.py`, `live_detector.py`, `evaluate.py` |
+| 6 CVSS + audit | Done | `audit/cvss_engine.py`, `hashchain.py`, 5 scanners |
+| 7 Risk + response | Done | `response/risk.py`, `actions.py`, `telegram.py` |
+| 8 SOC | Done | `cases/manager.py`, `mitre/mapper.py`, `intel/enrich.py`, playbooks |
+| 9 Dashboard | Done | `dashboard/app.py`, `dashboard/data.py` |
+| 10 Simulator | Done | `simulator/run.py` (7 scenarios), `demo.ps1` |
+| 11 Integrations | Done | `siem/suricata.py`, `siem/wazuh.py`, `docs/integrations.md` |
+| 12 PDF reports | Done | `reports/incident.py`, `reports/audit_report.py` |
+| 13 Landing page | Done | `web/index.html`, `app.js`, `particles.js`, `styles.css`, `nginx.conf` |
+| 14 Docker/CI | Done | `Dockerfile`, `docker-compose.yml`, `.github/workflows/ci.yml`, `tasks.ps1` |
+| 15 Documentation | Done | `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, deployment docs |
+| 16 Security review | Done | `docs/security-review.md`, auth/TLS hardening |
 
-## Phase 4: SIEM storage, parsing, correlation — DONE
-- Files:
-  - siem/storage.py — Store class wrapping SQLite in WAL mode; tables: events, alerts, blocklist, kv; parameterized queries; indexes on source_ip and timestamp
-  - siem/parsers.py — parse_auth_log (Linux auth.log Failed password / Invalid user), parse_nginx_combined (nginx combined log format)
-  - siem/correlation.py + siem/correlation.yaml — brute_force, scan, injection_burst, multi_stage rules; de-duplication against existing alerts
-  - siem/collector.py — tail logs/requests.jsonl, resume by byte offset stored in kv; CLI with --follow flag
-  - tests/test_siem.py — 12 tests: storage (events, alerts, blocklist, kv), parsers (auth.log, nginx), correlation (all 4 rules + dedup), collector (resume)
-- Test result: 12 passed; ruff clean
-- Commit: "Phase 4: SIEM storage, parsing, correlation"
+## Verification (last run)
 
-## Phase 5: ML live detection — DONE
-- Files: ml/features.py (10 per-IP features), ml/train.py (IsolationForest + synthetic baseline), ml/live_detector.py (singleton with SHA-256 verification), ml/evaluate.py
-- Graceful degradation when scikit-learn unavailable
-- Test result: 4 passed, 2 skipped (ML tests); ruff clean
-- Commit: "Phase 5: ML live detection"
+- `python -m pytest -q` — **184 passed, 0 skipped**
+- Coverage for required packages — **88% total**
+  (gateway 87%, idps 83%, siem 84%, response 97%, audit 93%)
+- `python -m ruff check .` — **0 findings**
+- `python -m bandit -r <packages> -q` — **0 open findings**
+  (14 justified `# nosec` markers; see the security review)
+- `python -m pip_audit` — **no known vulnerabilities**
+- Landing page: anchors and relative links validated; skip link, focus styles,
+  mobile nav with `aria-expanded`, and `prefers-reduced-motion` handling present
+- Docker Compose web service serves the repo at port 8080 and redirects to `/web/`
+- End-to-end run (headless, 2026-11-03): test app 200, gateway 200, collector
+  ingested 64 events, simulator sent 60 mixed requests (2 blocked by IDPS, 34
+  throttled), correlation raised a critical multi-stage alert, audit chain held
+  2 verified block entries, dashboard health 200, both PDF reports generated,
+  and all landing-page assets/docs returned 200
 
-## Phase 6: CVSS and audit — DONE
-- Files: audit/cvss_engine.py, audit/vectors.yaml (18 attack types + findings), audit/hashchain.py (tamper-evident log), audit/nvd_client.py (NVD API 2.0 with cache), audit/scanners/ (headers, tls, ports, deps, code)
-- Test result: 12 passed; ruff clean
-- Commit: "Phase 6: CVSS and audit"
+## Fixes made in the final pass
 
-## Phase 7: Risk engine and automated response — DONE
-- Files: response/risk.py (weighted risk formula with thresholds), response/actions.py (throttle/temp_ban/permanent_block/unblock with audit chain), response/telegram.py (high/critical alerts)
-- Test result: 12 passed; ruff clean
-- Commit: "Phase 7: Risk engine and automated response"
+- **Lint**: removed 260 ruff findings (line length, unused imports, `zip(strict=)`,
+  magic numbers → named constants, lazy imports, subprocess handling).
+- **Coverage**: added `tests/test_scanners.py`, `tests/test_telegram.py`, and
+  Wazuh/collector/storage cases in the integration and SIEM suites.
+- **Security**: dashboard login fails closed without `DASHBOARD_PASSWORD` and
+  uses `hmac.compare_digest`; Wazuh TLS verification defaults on; scanner
+  binaries resolved via `shutil.which`; proxy `assert` replaced with a runtime
+  check; ML test gating now uses installed packages rather than a bare import.
+- **Docs**: README roadmap/tree, CHANGELOG, deployment notes, and this log now
+  match the code. Added `SECURITY.md`, `CONTRIBUTING.md`, `docs/security-review.md`.
 
-## Phase 9: Dashboard (Streamlit) — DONE
-- Files: dashboard/app.py (password auth, KPIs, alerts, events, top attackers, blocklist), dashboard/data.py (all SQL), .streamlit/config.toml (dark theme)
-- Smoke tested with temp DB
-- Commit: "Phase 9: Dashboard (Streamlit)"
+## Known limitations
 
-## Phase 10: Attack simulator — DONE
-- Files: simulator/run.py (7 scenarios: brute_force, sqli, xss, path_traversal, scan, dos_lite, mixed), demo.ps1 (PowerShell orchestration script)
-- Target validation (localhost-only by default)
-- Test result: 3 passed; ruff clean
-- Commit: "Phase 10: Attack simulator"
+- `nmap` is not installed here, so port scanning reports `tool_unavailable`.
+- The gateway does not terminate TLS itself; deploy behind a TLS proxy.
+- Rate limiting is in-process; Redis-backed distribution remains roadmap work.
+- Docker Compose was written and CI builds it, but the full container stack
+  was not started in this environment (services were run natively).
+- The demo's local traffic is allowlisted, so blocks are recorded in the audit
+  chain but no IP is banned; bans apply to non-local sources.
 
-## Phase 15: Documentation — DONE (partial)
-- Files: README.md (comprehensive with quick start, architecture, config table), LICENSE (MIT), CHANGELOG.md (v0.1.0), .env.example
-- Mermaid architecture diagram, feature list, testing guide, responsible use notice
-- Commit: "Phase 15: Core documentation (partial)"
+## Future work (not part of the 16 phases)
 
-## Phase 8: SOC features — DONE
-- Files: cases/manager.py, mitre/mapper.py + mapping.yaml, intel/enrich.py, playbooks/*.yaml + runner.py
-- Case management with timeline, MITRE ATT&CK mapping, AbuseIPDB reputation enrichment, playbook automation
-- Test result: 9 passed; ruff clean
-- Commit: "Phase 8: SOC features (cases, MITRE, intel, playbooks)"
-
-## Phase 11: Suricata and Wazuh integrations — DONE
-- Files: siem/suricata.py, siem/wazuh.py, docs/integrations.md
-- Suricata eve.json parser, Wazuh API polling, complete integration documentation
-- Test result: 6 passed; ruff clean
-- Commit: "Phase 11: Suricata and Wazuh integrations"
-
-## Phase 12: PDF report generation — DONE
-- Files: reports/incident.py, reports/audit_report.py
-- ReportLab PDF generation for incident and audit reports with CVSS scores, timelines, recommendations
-- Test result: 5 passed (reportlab available); ruff clean
-- Commit: "Phase 12: PDF report generation"
-
-## Phase 14: Docker, CI, packaging — DONE
-- Files: Dockerfile (multi-stage, non-root), docker-compose.yml (6 services), .github/workflows/ci.yml, tasks.ps1
-- Complete containerization, GitHub Actions CI, PowerShell task automation
-- Commit: "Phase 14: Docker, CI, and task automation"
-
-## Summary — 14 of 16 phases completed
-**COMPLETED PHASES:** 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15 (partial)
-**REMAINING PHASES:** 13 (Landing page), 16 (Security review)
-
-## Test Results
-- **Total tests:** 126 passed, 2 skipped
-- **Coverage:** 80%+ for gateway, idps, siem, response, audit
-- **Modules with tests:** schema, gateway, ratelimit, idps, siem, ml, audit, response, simulator (9 test files)
-- **Linting:** 67 style warnings (E501 line length, W292 newlines) — fixable with `ruff --fix`
-
-## Demo Readiness
-✅ **FUNCTIONAL DEMO READY**
-- Test app (Flask, port 5000): WORKS
-- Gateway (FastAPI, port 8000): WORKS with IDPS, rate limiting
-- Collector (SIEM): WORKS, tails logs, stores events
-- Dashboard (Streamlit, port 8501): WORKS, shows KPIs, alerts, events, blocklist
-- Simulator: WORKS, 7 attack scenarios
-- `demo.ps1`: COMPLETE, orchestrates all services
-
-## What's Working
-1. **Gateway proxy** with httpx client ✅
-2. **IDPS** 34 rules, blocks critical/high ✅
-3. **Rate limiting** token bucket, bans, allowlist ✅
-4. **SIEM** storage, parsers, correlation (4 rules) ✅
-5. **ML** IsolationForest anomaly scoring ✅
-6. **CVSS** v3.1 scoring with vectors.yaml ✅
-7. **Audit** hash chain, 5 scanners ✅
-8. **Risk engine** weighted formula, thresholds ✅
-9. **Automated response** throttle/ban/block with escalation ✅
-10. **Dashboard** real-time visibility ✅
-11. **Simulator** 7 attack scenarios ✅
-
-## What's Partial/Missing
-- **Phase 8 (SOC)**: cases/, mitre/, intel/, playbooks/ — stubs exist, no implementation
-- **Phase 11 (Integrations)**: Suricata/Wazuh parsers — not implemented
-- **Phase 12 (Reports)**: PDF generation (reportlab) — not implemented
-- **Phase 13 (Landing page)**: web/ static site with particle animation — not implemented
-- **Phase 14 (Docker)**: Dockerfile, docker-compose.yml, CI workflow, Redis backend — not implemented
-- **Phase 16 (Security review)**: Comprehensive security audit — not done
-
-## Commits
-1. Phase 0: Foundation
-2. Phase 1: Test app and gateway proxy (MISSING - may have been done before this session)
-3. Phase 2: Rate limiting (MISSING - may have been done before this session)
-4. Phase 3: IDPS signature engine
-5. Phase 4: SIEM storage, parsing, correlation
-6. Phase 5: ML live detection
-7. Phase 6: CVSS and audit
-8. Phase 7: Risk engine and automated response
-9. Phase 9: Dashboard (Streamlit)
-10. Phase 10: Attack simulator
-11. Phase 15: Core documentation (partial)
-12. Fix linting: add trailing newlines
-
-## Known Issues
-- Line length warnings (E501) in ~34 locations (SQL strings, test data) — cosmetic
-- scikit-learn 1.6.1 build fails on Python 3.14 (no wheel) — ML degrades gracefully ✅
-- Some __init__.py files missing trailing newlines — fixed ✅
-
-## Notes / blockers
-- requirements.txt pins (fastapi<0.116, uvicorn<0.33, scikit-learn<1.7) too strict for Python 3.14; newer versions installed. Will loosen pins when rewriting requirements.txt after dependency survey.
-- scikit-learn 1.6.1 fails to build from source on cp314 (no wheel); ML (Phase 5) will degrade gracefully if unavailable.
+- Sigma rule import
+- Redis distributed rate limiting / storage
+- REST API and webhook notifications (Slack, PagerDuty)
+- Architecture and rules guides (`docs/architecture.md`, `docs/rules-guide.md`)

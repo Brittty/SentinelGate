@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from simulator.run import validate_target
 
 
@@ -23,6 +21,7 @@ def test_validate_target_allowed_list(monkeypatch):
     monkeypatch.setenv("ALLOWED_TARGETS", "testlab.local,192.168.1.100")
     # Need to reload the module to pick up the env var
     import importlib
+
     import simulator.run
 
     importlib.reload(simulator.run)

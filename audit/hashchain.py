@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -49,12 +50,12 @@ class HashChain:
             (prev_hash + entry_json).encode("utf-8")
         ).hexdigest()
 
-        from datetime import datetime, timezone
-
-        created_at = datetime.now(tz=timezone.utc).isoformat()
+        created_at = datetime.now(tz=UTC).isoformat()
 
         self.conn.execute(
-            "INSERT INTO audit_chain (prev_hash, entry_json, entry_hash, created_at) VALUES (?, ?, ?, ?)",
+            "INSERT INTO audit_chain"
+            " (prev_hash, entry_json, entry_hash, created_at)"
+            " VALUES (?, ?, ?, ?)",
             (prev_hash, entry_json, entry_hash, created_at),
         )
         self.conn.commit()
@@ -95,7 +96,8 @@ class HashChain:
     def get_entries(self, limit: int = 100) -> list[dict[str, Any]]:
         """Return recent entries as dicts."""
         rows = self.conn.execute(
-            "SELECT id, entry_json, entry_hash, created_at FROM audit_chain ORDER BY id DESC LIMIT ?",
+            "SELECT id, entry_json, entry_hash, created_at FROM audit_chain"
+            " ORDER BY id DESC LIMIT ?",
             (limit,),
         ).fetchall()
         result = []

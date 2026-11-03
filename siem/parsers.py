@@ -6,7 +6,8 @@ Parses Linux auth.log and nginx combined log format into Event-shaped dicts.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from http import HTTPStatus
 from typing import Any
 
 _AUTH_FAILED_RE = re.compile(
@@ -35,7 +36,7 @@ def _month_num(mon: str) -> int:
 
 
 def _auth_log_timestamp(month: str, day: str, time_str: str, year: int) -> str:
-    dt = datetime(year, _month_num(month), int(day), tzinfo=timezone.utc)
+    dt = datetime(year, _month_num(month), int(day), tzinfo=UTC)
     h, m, s = map(int, time_str.split(":"))
     dt = dt.replace(hour=h, minute=m, second=s)
     return dt.isoformat()
@@ -44,7 +45,7 @@ def _auth_log_timestamp(month: str, day: str, time_str: str, year: int) -> str:
 def parse_auth_log(text: str, year: int | None = None) -> list[dict[str, Any]]:
     """Parse Linux auth.log lines for Failed password / Invalid user events."""
     if year is None:
-        year = datetime.now(tz=timezone.utc).year
+        year = datetime.now(tz=UTC).year
     events: list[dict[str, Any]] = []
     for line in text.splitlines():
         m = _AUTH_FAILED_RE.search(line) or _AUTH_INVALID_RE.search(line)
@@ -83,8 +84,10 @@ def parse_nginx_combined(text: str) -> list[dict[str, Any]]:
             continue
         status = int(m.group("status"))
         action = "allow"
-        if status >= 400:
-            action = "throttle" if status == 429 else "block"
+        if status >= HTTPStatus.BAD_REQUEST:
+            action = (
+                "throttle" if status == HTTPStatus.TOO_MANY_REQUESTS else "block"
+            )
         events.append(
             {
                 "timestamp": _parse_nginx_time(m.group("time")),
@@ -113,4 +116,4 @@ def _parse_nginx_time(time_str: str) -> str:
         dt = datetime.strptime(time_str, "%d/%b/%Y:%H:%M:%S %z")
         return dt.isoformat()
     except ValueError:
-        return datetime.now(tz=timezone.utc).isoformat()
+        return datetime.now(tz=UTC).isoformat()

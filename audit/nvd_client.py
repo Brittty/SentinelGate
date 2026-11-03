@@ -5,9 +5,10 @@ Looks up CVE details from the National Vulnerability Database.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import time
-from datetime import datetime, timezone
+from http import HTTPStatus
 from typing import Any
 
 import requests
@@ -50,8 +51,6 @@ class NVDClient:
         if row:
             data, cached_at = row
             if now - cached_at < CACHE_TTL:
-                import json
-
                 return json.loads(data)
 
         # Fetch from API
@@ -66,22 +65,21 @@ class NVDClient:
                 resp = requests.get(
                     NVD_API_URL, params=params, headers=headers, timeout=TIMEOUT
                 )
-                if resp.status_code == 200:
+                if resp.status_code == HTTPStatus.OK:
                     result = resp.json()
                     vulnerabilities = result.get("vulnerabilities", [])
                     if vulnerabilities:
                         cve_data = vulnerabilities[0]
                         # Cache it
-                        import json
-
                         self.conn.execute(
-                            "INSERT OR REPLACE INTO nvd_cache (cve_id, data, cached_at) VALUES (?, ?, ?)",
+                            "INSERT OR REPLACE INTO nvd_cache"
+                            " (cve_id, data, cached_at) VALUES (?, ?, ?)",
                             (cve_id, json.dumps(cve_data), now),
                         )
                         self.conn.commit()
                         return cve_data
                     return None
-                elif resp.status_code == 404:
+                elif resp.status_code == HTTPStatus.NOT_FOUND:
                     return None
                 else:
                     # Rate limit or server error; retry with backoff

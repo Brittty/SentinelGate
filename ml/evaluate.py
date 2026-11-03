@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from argparse import ArgumentParser
 
 try:
-    import numpy as np
-    from sklearn.metrics import classification_report, precision_recall_fscore_support
+    from sklearn.metrics import precision_recall_fscore_support
 
     ML_AVAILABLE = True
 except ImportError:
@@ -16,7 +16,11 @@ except ImportError:
 from ml.live_detector import LiveDetector
 
 
-def evaluate(detector: LiveDetector, normal_events: list[list[dict]], attack_events: list[list[dict]]) -> dict:
+def evaluate(
+    detector: LiveDetector,
+    normal_events: list[list[dict]],
+    attack_events: list[list[dict]],
+) -> dict:
     """Evaluate detector on labeled windows.
 
     normal_events: list of normal windows (each window is a list of events)
@@ -72,8 +76,10 @@ def write_report(results: dict, output_path: str) -> None:
         fh.write(f"- **F1 Score:** {results['f1']:.3f}\n")
         fh.write(f"- **Samples:** {results['samples']}\n")
         fh.write("\n## Notes\n\n")
-        fh.write("Evaluated on synthetic or hand-built windows. "
-                 "For production use, validate on real attack traffic.\n")
+        fh.write(
+            "Evaluated on synthetic or hand-built windows. "
+            "For production use, validate on real attack traffic.\n"
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -92,19 +98,54 @@ def main(argv: list[str] | None = None) -> int:
 
     # Hand-built sample windows for smoke test
     normal_window = [
-        {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.1", "path": "/", "query": "", "status": 200},
-        {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.1", "path": "/about", "query": "", "status": 200},
+        {
+            "timestamp": "2026-11-03T05:00:00Z",
+            "source_ip": "192.0.2.1",
+            "path": "/",
+            "query": "",
+            "status": 200,
+        },
+        {
+            "timestamp": "2026-11-03T05:00:01Z",
+            "source_ip": "192.0.2.1",
+            "path": "/about",
+            "query": "",
+            "status": 200,
+        },
     ]
     attack_window = [
-        {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.2", "path": "/", "query": "id=1' OR '1'='1", "status": 200},
-        {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.2", "path": "/admin", "query": "id=1 UNION SELECT", "status": 200},
-        {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.2", "path": "/test", "query": "q=<script>", "status": 200},
-        {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.2", "path": "/api", "query": "cmd=sleep(5)", "status": 200},
+        {
+            "timestamp": "2026-11-03T05:00:00Z",
+            "source_ip": "192.0.2.2",
+            "path": "/",
+            "query": "id=1' OR '1'='1",
+            "status": 200,
+        },
+        {
+            "timestamp": "2026-11-03T05:00:00Z",
+            "source_ip": "192.0.2.2",
+            "path": "/admin",
+            "query": "id=1 UNION SELECT",
+            "status": 200,
+        },
+        {
+            "timestamp": "2026-11-03T05:00:01Z",
+            "source_ip": "192.0.2.2",
+            "path": "/test",
+            "query": "q=<script>",
+            "status": 200,
+        },
+        {
+            "timestamp": "2026-11-03T05:00:01Z",
+            "source_ip": "192.0.2.2",
+            "path": "/api",
+            "query": "cmd=sleep(5)",
+            "status": 200,
+        },
     ]
 
     results = evaluate(detector, [normal_window], [attack_window])
 
-    import os
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     write_report(results, args.output)
     print(f"Evaluation report written to {args.output}", file=sys.stderr)

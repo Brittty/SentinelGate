@@ -105,7 +105,7 @@ curl http://localhost:8000/health
 
 # Access dashboard
 # Open browser: http://localhost:8501
-# Password: admin (or your DASHBOARD_PASSWORD)
+# Password: the value of DASHBOARD_PASSWORD
 ```
 
 ---
@@ -138,7 +138,7 @@ Services started:
 - **collector**: Background SIEM collector
 - **dashboard**: Port 8501 (Streamlit UI)
 - **redis**: Port 6379 (optional, for future use)
-- **web**: Port 8080 (landing page, if implemented)
+- **web**: Port 8080 (static landing page at `/web/`)
 
 ### Step 3: Check Status
 
@@ -510,7 +510,7 @@ echo "All health checks passed"
 | `DB_PATH` | `logs/siem.db` | SQLite database path |
 | `ALLOWED_TARGETS` | `""` | Comma-separated IPs for scanner |
 | `ALLOWLIST` | `""` | IPs exempt from rate limiting |
-| `DASHBOARD_PASSWORD` | `admin` | Dashboard login password |
+| `DASHBOARD_PASSWORD` | (required) | Dashboard login password |
 | `TELEGRAM_TOKEN` | `""` | Telegram bot token (optional) |
 | `TELEGRAM_CHAT_ID` | `""` | Telegram chat ID (optional) |
 | `NVD_API_KEY` | `""` | NVD API key (optional) |

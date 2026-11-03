@@ -6,13 +6,17 @@ Only scans localhost or targets in ALLOWED_TARGETS.
 from __future__ import annotations
 
 import os
-import subprocess
+import shutil
+import subprocess  # nosec B404
 from typing import Any
 from urllib.parse import urlparse
 
-
 ALLOWED_TARGETS = os.getenv("ALLOWED_TARGETS", "").split(",")
 ALLOWED_TARGETS = [t.strip() for t in ALLOWED_TARGETS if t.strip()]
+
+# nmap splits a port line into "22/tcp open ssh"; index 2 holds the service.
+SERVICE_INDEX = 2
+MIN_SERVICE_FIELDS = SERVICE_INDEX + 1
 
 
 def scan_ports(target_url: str, timeout: float = 30.0) -> list[dict[str, Any]]:
@@ -36,9 +40,20 @@ def scan_ports(target_url: str, timeout: float = 30.0) -> list[dict[str, Any]]:
         ]
 
     # Check if nmap is available
+    nmap = shutil.which("nmap")
+    if nmap is None:
+        return [
+            {
+                "type": "tool_unavailable",
+                "title": "nmap not installed",
+                "evidence": "nmap binary not found on PATH",
+                "remediation": "Install nmap to enable port scanning",
+            }
+        ]
+
     try:
-        subprocess.run(
-            ["nmap", "--version"],
+        subprocess.run(  # noqa: S603  # nosec B603
+            [nmap, "--version"],
             capture_output=True,
             timeout=5,
             check=False,
@@ -56,8 +71,8 @@ def scan_ports(target_url: str, timeout: float = 30.0) -> list[dict[str, Any]]:
     # Run nmap
     findings = []
     try:
-        result = subprocess.run(
-            ["nmap", "-p", "1-1024", "--open", hostname],
+        result = subprocess.run(  # noqa: S603  # nosec B603
+            [nmap, "-p", "1-1024", "--open", hostname],
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -71,7 +86,7 @@ def scan_ports(target_url: str, timeout: float = 30.0) -> list[dict[str, Any]]:
                 parts = line.split()
                 port_info = parts[0]  # e.g., "22/tcp"
                 port_num = port_info.split("/")[0]
-                service = parts[2] if len(parts) > 2 else "unknown"
+                service = parts[SERVICE_INDEX] if len(parts) >= MIN_SERVICE_FIELDS else "unknown"
 
                 # Flag unexpected ports (anything except 80, 443, 5000)
                 if port_num not in ("80", "443", "5000"):

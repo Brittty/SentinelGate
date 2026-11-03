@@ -6,7 +6,7 @@ import json
 import os
 import sqlite3
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -14,7 +14,6 @@ from siem.collector import collect
 from siem.correlation import correlate
 from siem.parsers import parse_auth_log, parse_nginx_combined
 from siem.storage import Store
-
 
 # --- Storage ---
 
@@ -27,7 +26,7 @@ def store() -> Store:
 
 def test_insert_event(store: Store):
     event = {
-        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "timestamp": datetime.now(tz=UTC).isoformat(),
         "source_ip": "192.0.2.1",
         "method": "GET",
         "path": "/test",
@@ -59,7 +58,7 @@ def test_insert_alert(store: Store):
         "status": "new",
         "mitre_id": "T1110",
         "evidence": "{}",
-        "created_at": datetime.now(tz=timezone.utc).isoformat(),
+        "created_at": datetime.now(tz=UTC).isoformat(),
     }
     store.insert_alert(alert)
     alerts = store.get_alerts()
@@ -68,9 +67,9 @@ def test_insert_alert(store: Store):
 
 
 def test_blocklist(store: Store):
-    now = datetime.now(tz=timezone.utc).timestamp()
+    now = datetime.now(tz=UTC).timestamp()
     future = now + 3600
-    store.upsert_blocklist("192.0.2.1", future, "test", datetime.now(tz=timezone.utc).isoformat())
+    store.upsert_blocklist("192.0.2.1", future, "test", datetime.now(tz=UTC).isoformat())
     assert store.is_blocked("192.0.2.1", now)
     assert not store.is_blocked("192.0.2.1", future + 10)
 
@@ -114,8 +113,8 @@ def test_parse_nginx_combined():
 
 
 def test_brute_force_correlation(store: Store):
-    now = datetime.now(tz=timezone.utc).timestamp()
-    now_iso = datetime.fromtimestamp(now, tz=timezone.utc).isoformat()
+    now = datetime.now(tz=UTC).timestamp()
+    now_iso = datetime.fromtimestamp(now, tz=UTC).isoformat()
     events = [
         {
             "timestamp": now_iso,
@@ -132,8 +131,8 @@ def test_brute_force_correlation(store: Store):
 
 
 def test_scan_correlation(store: Store):
-    now = datetime.now(tz=timezone.utc).timestamp()
-    now_iso = datetime.fromtimestamp(now, tz=timezone.utc).isoformat()
+    now = datetime.now(tz=UTC).timestamp()
+    now_iso = datetime.fromtimestamp(now, tz=UTC).isoformat()
     events = [
         {
             "timestamp": now_iso,
@@ -149,8 +148,8 @@ def test_scan_correlation(store: Store):
 
 
 def test_injection_burst_correlation(store: Store):
-    now = datetime.now(tz=timezone.utc).timestamp()
-    now_iso = datetime.fromtimestamp(now, tz=timezone.utc).isoformat()
+    now = datetime.now(tz=UTC).timestamp()
+    now_iso = datetime.fromtimestamp(now, tz=UTC).isoformat()
     events = [
         {
             "timestamp": now_iso,
@@ -166,8 +165,8 @@ def test_injection_burst_correlation(store: Store):
 
 
 def test_multi_stage_correlation(store: Store):
-    now = datetime.now(tz=timezone.utc).timestamp()
-    now_iso = datetime.fromtimestamp(now, tz=timezone.utc).isoformat()
+    now = datetime.now(tz=UTC).timestamp()
+    now_iso = datetime.fromtimestamp(now, tz=UTC).isoformat()
     events = [
         {
             "timestamp": now_iso,
@@ -190,8 +189,8 @@ def test_multi_stage_correlation(store: Store):
 
 
 def test_deduplication(store: Store):
-    now = datetime.now(tz=timezone.utc).timestamp()
-    now_iso = datetime.fromtimestamp(now, tz=timezone.utc).isoformat()
+    now = datetime.now(tz=UTC).timestamp()
+    now_iso = datetime.fromtimestamp(now, tz=UTC).isoformat()
     events = [
         {
             "timestamp": now_iso,
@@ -222,7 +221,7 @@ def test_collector():
         with open(log_path, "w", encoding="utf-8") as fh:
             for i in range(3):
                 event = {
-                    "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                    "timestamp": datetime.now(tz=UTC).isoformat(),
                     "source_ip": f"192.0.2.{i}",
                     "method": "GET",
                     "path": "/test",
@@ -251,7 +250,7 @@ def test_collector():
         # Resume: append one more line
         with open(log_path, "a", encoding="utf-8") as fh:
             event = {
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
                 "source_ip": "192.0.2.100",
                 "method": "POST",
                 "path": "/new",
@@ -276,3 +275,98 @@ def test_collector():
         assert len(events) == 4
 
         conn.close()
+
+
+# --- Retention and status transitions ---
+
+
+def test_alert_status_and_filter(store: Store):
+    alert = {
+        "alert_id": "test-456",
+        "ip": "192.0.2.1",
+        "rule": "scan",
+        "severity": "medium",
+        "status": "new",
+        "mitre_id": "T1046",
+        "evidence": "{}",
+        "created_at": datetime.now(tz=UTC).isoformat(),
+    }
+    store.insert_alert(alert)
+    store.update_alert_status("test-456", "triaged")
+
+    assert store.get_alerts(status="triaged")[0]["status"] == "triaged"
+    assert store.get_alerts(status="new") == []
+
+
+def test_recent_events_filters_by_ip(store: Store):
+    base = {
+        "method": "GET",
+        "path": "/",
+        "query": "",
+        "status": 200,
+        "user_agent": "",
+        "latency_ms": 0.0,
+        "rule_hit": "",
+        "attack_type": "",
+        "ml_score": 0.0,
+        "cvss_score": 0.0,
+        "risk_score": 0.0,
+        "action": "allow",
+        "source": "gateway",
+    }
+    now = datetime.now(tz=UTC).isoformat()
+    store.insert_event({**base, "timestamp": now, "source_ip": "192.0.2.1"})
+    store.insert_event({**base, "timestamp": now, "source_ip": "192.0.2.2"})
+
+    events = store.recent_events(source_ip="192.0.2.1")
+    assert len(events) == 1
+    assert events[0]["source_ip"] == "192.0.2.1"
+
+
+def test_purge_retention(store: Store):
+    old = "2000-01-01T00:00:00+00:00"
+    event = {
+        "timestamp": old,
+        "source_ip": "192.0.2.1",
+        "method": "GET",
+        "path": "/",
+        "query": "",
+        "status": 200,
+        "user_agent": "",
+        "latency_ms": 0.0,
+        "rule_hit": "",
+        "attack_type": "",
+        "ml_score": 0.0,
+        "cvss_score": 0.0,
+        "risk_score": 0.0,
+        "action": "allow",
+        "source": "gateway",
+    }
+    store.insert_event(event)
+    store.insert_alert(
+        {
+            "alert_id": "old-alert",
+            "ip": "192.0.2.1",
+            "rule": "scan",
+            "severity": "low",
+            "status": "new",
+            "mitre_id": "",
+            "evidence": "{}",
+            "created_at": old,
+        }
+    )
+
+    assert store.purge_retention(days=30) == 2
+    assert store.recent_events() == []
+    assert store.get_alerts() == []
+
+
+def test_collector_main(tmp_path):
+    from siem.collector import main
+
+    log = tmp_path / "requests.jsonl"
+    log.write_text("", encoding="utf-8")
+    db_path = tmp_path / "nested" / "siem.db"
+
+    assert main(["--log", str(log), "--db", str(db_path)]) == 0
+    assert db_path.exists()

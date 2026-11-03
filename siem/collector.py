@@ -13,13 +13,22 @@ import sqlite3
 import sys
 import time
 from argparse import ArgumentParser
-from typing import Any
 
+from siem.correlation import correlate
 from siem.storage import Store
 
 DEFAULT_LOG = "logs/requests.jsonl"
 DEFAULT_DB = "logs/siem.db"
 OFFSET_KEY = "collector_offset"
+CORRELATE_EVERY = 10
+
+
+def run_correlation(store: Store) -> int:
+    """Correlate recent events and persist any new alerts."""
+    alerts = correlate(store.recent_events(limit=1000), store)
+    for alert in alerts:
+        store.insert_alert(alert)
+    return len(alerts)
 
 
 def collect(store: Store, log_path: str, follow: bool = False) -> int:
@@ -27,8 +36,11 @@ def collect(store: Store, log_path: str, follow: bool = False) -> int:
 
     Returns the number of events inserted.
     """
-    if not os.path.isfile(log_path):
-        return 0
+    # In follow mode, wait for the gateway to create the log instead of exiting.
+    while not os.path.isfile(log_path):
+        if not follow:
+            return 0
+        time.sleep(0.5)
 
     offset_str = store.get_kv(OFFSET_KEY)
     offset = int(offset_str) if offset_str else 0
@@ -51,6 +63,10 @@ def collect(store: Store, log_path: str, follow: bool = False) -> int:
                 pass
             offset = fh.tell()
             store.set_kv(OFFSET_KEY, str(offset))
+            if count and count % CORRELATE_EVERY == 0:
+                run_correlation(store)
+
+    run_correlation(store)
     return count
 
 

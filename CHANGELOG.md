@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Risk Engine (Phase 7)**: Weighted risk formula (ML 30%, rules 30%, reputation 20%, CVSS 20%), thresholds (40/60/80), escalation ladder (throttle → temp ban → permanent block), Telegram alerts
 - **Dashboard (Phase 9)**: Streamlit UI with KPIs, alerts, events, top attackers, blocklist; password auth; dark theme
 - **Simulator (Phase 10)**: Attack traffic generator with 7 scenarios (brute force, SQLi, XSS, path traversal, scan, DoS-lite, mixed); localhost-only by default
+- **SOC Features (Phase 8)**: Case management with timeline, MITRE ATT&CK mapping, AbuseIPDB enrichment, YAML playbooks
+- **Integrations (Phase 11)**: Suricata `eve.json` tailing and Wazuh API polling, both resuming from stored offsets
+- **PDF Reports (Phase 12)**: Incident and audit report generation with ReportLab
+- **Landing Page (Phase 13)**: Static `web/` site with accessible navigation, reduced-motion support, and copy-to-clipboard quick start
+- **Deployment (Phase 14)**: Multi-stage Dockerfile, six-service Compose stack, GitHub Actions CI, `tasks.ps1`
 - **Demo Script**: PowerShell `demo.ps1` orchestrating test app, gateway, collector, simulator, dashboard
 
 ### Security
@@ -29,8 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scanners and simulator refuse non-local targets
 
 ### Testing
-- 80%+ coverage for gateway, IDPS, SIEM, response, audit
-- 60+ tests across 6 test modules
+- 88% coverage across gateway, IDPS, SIEM, response, audit (each ≥ 80%)
+- 184 tests across 16 test modules
 - CI-ready (pytest + ruff + bandit + pip-audit)
 
 ### Documentation
@@ -38,15 +43,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MIT license
 - .env.example with all config options
 
+### Security review (Phase 16)
+- Dashboard login fails closed without `DASHBOARD_PASSWORD` and uses constant-time comparison
+- Wazuh TLS verification enabled by default (`WAZUH_VERIFY_TLS=false` to opt out)
+- Scanner subprocesses resolve binaries with `shutil.which`; no assert-based checks
+- `ruff`, `bandit`, and `pip-audit` clean; details in `docs/security-review.md`
+- Dependency bounds relaxed so Python 3.14 resolves current wheels
+
 ## [Unreleased]
 
 ### Planned
-- **Phase 8**: SOC features (cases, MITRE ATT&CK mapping, playbooks, threat intel enrichment)
-- **Phase 11**: Suricata and Wazuh integrations
-- **Phase 12**: PDF reports (incident, audit)
-- **Phase 13**: Landing page with particle animation
-- **Phase 14**: Docker compose, GitHub Actions CI, Redis backend
-- **Phase 15**: Complete documentation (architecture, deployment, rules guide)
-- **Phase 16**: Security review and hardening
+- Sigma rule import
+- Redis distributed backend
+- REST API for programmatic access
+- Webhook notifications (Slack, PagerDuty)
 
 [0.1.0]: https://github.com/yourusername/sentinelgate/releases/tag/v0.1.0

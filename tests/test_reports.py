@@ -8,12 +8,14 @@ import tempfile
 import pytest
 
 try:
-    from reports.audit_report import calculate_audit_score, generate_audit_report
-    from reports.incident import generate_incident_report
+    import reportlab  # noqa: F401
 
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
+
+from reports.audit_report import calculate_audit_score, generate_audit_report
+from reports.incident import generate_incident_report
 
 
 @pytest.mark.skipif(not REPORTLAB_AVAILABLE, reason="reportlab not available")
@@ -99,7 +101,14 @@ def test_generate_incident_report():
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "incident.pdf")
         result = generate_incident_report(
-            case, timeline, affected_ips, attack_types, mitre_techniques, actions, recommendations, output_path
+            case,
+            timeline,
+            affected_ips,
+            attack_types,
+            mitre_techniques,
+            actions,
+            recommendations,
+            output_path,
         )
         assert result is True
         assert os.path.isfile(output_path)

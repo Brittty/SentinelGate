@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import tempfile
-from datetime import datetime, timezone
 
 import pytest
 
 from ml.features import extract_features
 
-# Check if ML libraries are available
-try:
-    import numpy as np
+# Check if the optional ML stack is actually installed
+ML_AVAILABLE = all(
+    importlib.util.find_spec(module) is not None
+    for module in ("numpy", "sklearn", "joblib")
+)
+
+if ML_AVAILABLE:
     from ml.live_detector import LiveDetector
     from ml.train import generate_synthetic_baseline, train_model
-
-    ML_AVAILABLE = True
-except ImportError:
-    ML_AVAILABLE = False
 
 
 def test_extract_features_empty():
@@ -29,9 +29,27 @@ def test_extract_features_empty():
 
 def test_extract_features_normal():
     events = [
-        {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.1", "path": "/", "query": "", "status": 200},
-        {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.1", "path": "/about", "query": "", "status": 200},
-        {"timestamp": "2026-11-03T05:00:02Z", "source_ip": "192.0.2.1", "path": "/", "query": "", "status": 200},
+        {
+            "timestamp": "2026-11-03T05:00:00Z",
+            "source_ip": "192.0.2.1",
+            "path": "/",
+            "query": "",
+            "status": 200,
+        },
+        {
+            "timestamp": "2026-11-03T05:00:01Z",
+            "source_ip": "192.0.2.1",
+            "path": "/about",
+            "query": "",
+            "status": 200,
+        },
+        {
+            "timestamp": "2026-11-03T05:00:02Z",
+            "source_ip": "192.0.2.1",
+            "path": "/",
+            "query": "",
+            "status": 200,
+        },
     ]
     features = extract_features(events)
     assert features["requests_per_min"] == 3
@@ -43,10 +61,34 @@ def test_extract_features_normal():
 
 def test_extract_features_attack_like():
     events = [
-        {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.2", "path": "/admin", "query": "id=1' OR '1'='1", "status": 403},
-        {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.2", "path": "/test", "query": "cmd=sleep(5)", "status": 403},
-        {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.2", "path": "/api", "query": "q=<script>alert(1)</script>", "status": 403},
-        {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.2", "path": "/data", "query": "id=1 UNION SELECT", "status": 403},
+        {
+            "timestamp": "2026-11-03T05:00:00Z",
+            "source_ip": "192.0.2.2",
+            "path": "/admin",
+            "query": "id=1' OR '1'='1",
+            "status": 403,
+        },
+        {
+            "timestamp": "2026-11-03T05:00:00Z",
+            "source_ip": "192.0.2.2",
+            "path": "/test",
+            "query": "cmd=sleep(5)",
+            "status": 403,
+        },
+        {
+            "timestamp": "2026-11-03T05:00:01Z",
+            "source_ip": "192.0.2.2",
+            "path": "/api",
+            "query": "q=<script>alert(1)</script>",
+            "status": 403,
+        },
+        {
+            "timestamp": "2026-11-03T05:00:01Z",
+            "source_ip": "192.0.2.2",
+            "path": "/data",
+            "query": "id=1 UNION SELECT",
+            "status": 403,
+        },
     ]
     features = extract_features(events)
     assert features["requests_per_min"] == 4
@@ -73,8 +115,20 @@ def test_train_and_load_model():
 
         # Score a normal window
         normal = [
-            {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.1", "path": "/", "query": "", "status": 200},
-            {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.1", "path": "/about", "query": "", "status": 200},
+            {
+                "timestamp": "2026-11-03T05:00:00Z",
+                "source_ip": "192.0.2.1",
+                "path": "/",
+                "query": "",
+                "status": 200,
+            },
+            {
+                "timestamp": "2026-11-03T05:00:01Z",
+                "source_ip": "192.0.2.1",
+                "path": "/about",
+                "query": "",
+                "status": 200,
+            },
         ]
         score, features = detector.score(normal)
         assert 0.0 <= score <= 1.0
@@ -92,14 +146,50 @@ def test_detector_scores_differ():
         detector = LiveDetector(model_path, model_path.replace(".joblib", ".json"))
 
         normal = [
-            {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.1", "path": "/", "query": "", "status": 200},
-            {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.1", "path": "/about", "query": "", "status": 200},
+            {
+                "timestamp": "2026-11-03T05:00:00Z",
+                "source_ip": "192.0.2.1",
+                "path": "/",
+                "query": "",
+                "status": 200,
+            },
+            {
+                "timestamp": "2026-11-03T05:00:01Z",
+                "source_ip": "192.0.2.1",
+                "path": "/about",
+                "query": "",
+                "status": 200,
+            },
         ]
         attack = [
-            {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.2", "path": "/admin", "query": "id=1' OR '1'='1", "status": 403},
-            {"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.2", "path": "/test", "query": "cmd=sleep(5)", "status": 403},
-            {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.2", "path": "/api", "query": "q=<script>", "status": 403},
-            {"timestamp": "2026-11-03T05:00:01Z", "source_ip": "192.0.2.2", "path": "/data", "query": "id=1 UNION SELECT", "status": 403},
+            {
+                "timestamp": "2026-11-03T05:00:00Z",
+                "source_ip": "192.0.2.2",
+                "path": "/admin",
+                "query": "id=1' OR '1'='1",
+                "status": 403,
+            },
+            {
+                "timestamp": "2026-11-03T05:00:00Z",
+                "source_ip": "192.0.2.2",
+                "path": "/test",
+                "query": "cmd=sleep(5)",
+                "status": 403,
+            },
+            {
+                "timestamp": "2026-11-03T05:00:01Z",
+                "source_ip": "192.0.2.2",
+                "path": "/api",
+                "query": "q=<script>",
+                "status": 403,
+            },
+            {
+                "timestamp": "2026-11-03T05:00:01Z",
+                "source_ip": "192.0.2.2",
+                "path": "/data",
+                "query": "id=1 UNION SELECT",
+                "status": 403,
+            },
         ]
 
         score_normal, _ = detector.score(normal)
@@ -118,7 +208,15 @@ def test_detector_graceful_fallback():
     detector = LD("nonexistent.joblib", "nonexistent.json")
     assert not detector.model_available
 
-    events = [{"timestamp": "2026-11-03T05:00:00Z", "source_ip": "192.0.2.1", "path": "/", "query": "", "status": 200}]
+    events = [
+        {
+            "timestamp": "2026-11-03T05:00:00Z",
+            "source_ip": "192.0.2.1",
+            "path": "/",
+            "query": "",
+            "status": 200,
+        }
+    ]
     score, features = detector.score(events)
     assert score == 0.0
     assert features == []

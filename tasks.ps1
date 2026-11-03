@@ -41,7 +41,7 @@ function Invoke-Setup {
     Write-Host "    Creating logs directory..." -ForegroundColor Cyan
     New-Item -ItemType Directory -Path "logs" -Force | Out-Null
 
-    Write-Host "[✓] Setup complete!" -ForegroundColor Green
+    Write-Host "[OK] Setup complete!" -ForegroundColor Green
 }
 
 function Invoke-Test {
@@ -68,7 +68,7 @@ function Invoke-Run {
     Start-Process python -ArgumentList "-m", "siem.collector", "--follow" -NoNewWindow
     Start-Sleep -Seconds 1
 
-    Write-Host "[✓] Services started" -ForegroundColor Green
+    Write-Host "[OK] Services started" -ForegroundColor Green
     Write-Host "    Test app: http://localhost:5000" -ForegroundColor Cyan
     Write-Host "    Gateway:  http://localhost:8000" -ForegroundColor Cyan
     Write-Host ""
@@ -84,13 +84,13 @@ function Invoke-Demo {
 function Invoke-DockerBuild {
     Write-Host "[*] Building Docker images..." -ForegroundColor Green
     docker build -t sentinelgate:latest .
-    Write-Host "[✓] Build complete!" -ForegroundColor Green
+    Write-Host "[OK] Build complete!" -ForegroundColor Green
 }
 
 function Invoke-DockerUp {
     Write-Host "[*] Starting Docker Compose stack..." -ForegroundColor Green
     docker-compose up -d
-    Write-Host "[✓] Stack started!" -ForegroundColor Green
+    Write-Host "[OK] Stack started!" -ForegroundColor Green
     Write-Host "    Gateway:   http://localhost:8000" -ForegroundColor Cyan
     Write-Host "    Dashboard: http://localhost:8501" -ForegroundColor Cyan
     Write-Host "    Landing:   http://localhost:8080" -ForegroundColor Cyan
@@ -99,7 +99,7 @@ function Invoke-DockerUp {
 function Invoke-DockerDown {
     Write-Host "[*] Stopping Docker Compose stack..." -ForegroundColor Green
     docker-compose down
-    Write-Host "[✓] Stack stopped!" -ForegroundColor Green
+    Write-Host "[OK] Stack stopped!" -ForegroundColor Green
 }
 
 function Invoke-Clean {
@@ -124,7 +124,7 @@ function Invoke-Clean {
         Remove-Item -Force ".coverage"
     }
 
-    Write-Host "[✓] Cleanup complete!" -ForegroundColor Green
+    Write-Host "[OK] Cleanup complete!" -ForegroundColor Green
 }
 
 # Main execution

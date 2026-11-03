@@ -13,7 +13,12 @@ from __future__ import annotations
 
 import math
 from collections import Counter
+from datetime import datetime
 from typing import Any
+
+HTTP_BAD_REQUEST = 400
+HTTP_INTERNAL_ERROR = 500
+HTTP_SERVER_ERROR_LIMIT = 600
 
 
 def extract_features(events: list[dict[str, Any]]) -> dict[str, float]:
@@ -41,8 +46,12 @@ def extract_features(events: list[dict[str, Any]]) -> dict[str, float]:
     unique_ratio = unique / n if n > 0 else 0.0
 
     status_codes = [ev.get("status", 200) for ev in events]
-    error_4xx = sum(1 for s in status_codes if 400 <= s < 500) / n
-    error_5xx = sum(1 for s in status_codes if 500 <= s < 600) / n
+    error_4xx = sum(
+        1 for s in status_codes if HTTP_BAD_REQUEST <= s < HTTP_INTERNAL_ERROR
+    ) / n
+    error_5xx = sum(
+        1 for s in status_codes if HTTP_INTERNAL_ERROR <= s < HTTP_SERVER_ERROR_LIMIT
+    ) / n
 
     queries = [ev.get("query", "") for ev in events]
     lengths = [len(q) for q in queries]
@@ -62,7 +71,6 @@ def extract_features(events: list[dict[str, Any]]) -> dict[str, float]:
         ts_str = ev.get("timestamp", "")
         if ts_str:
             try:
-                from datetime import datetime
                 dt = datetime.fromisoformat(ts_str)
                 timestamps.append(dt.timestamp())
             except (ValueError, TypeError):
@@ -71,7 +79,9 @@ def extract_features(events: list[dict[str, Any]]) -> dict[str, float]:
     mean_gap = 0.0
     if len(timestamps) > 1:
         timestamps.sort()
-        gaps = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps) - 1)]
+        gaps = [
+            timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)
+        ]
         mean_gap = sum(gaps) / len(gaps) if gaps else 0.0
 
     return {

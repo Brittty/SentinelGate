@@ -6,8 +6,12 @@ Polls Wazuh API or indexer for alerts and converts to Event schema.
 from __future__ import annotations
 
 import os
+import sqlite3
+import sys
 import time
-from datetime import datetime, timezone
+from argparse import ArgumentParser
+from datetime import UTC, datetime
+from http import HTTPStatus
 from typing import Any
 
 import requests
@@ -18,6 +22,13 @@ WAZUH_URL = os.getenv("WAZUH_URL", "https://localhost:55000")
 WAZUH_USER = os.getenv("WAZUH_USER", "")
 WAZUH_PASSWORD = os.getenv("WAZUH_PASSWORD", "")
 TIMEOUT = 10.0
+# Wazuh commonly runs with a self-signed certificate in labs. Verification stays
+# on unless the operator explicitly opts out.
+WAZUH_VERIFY_TLS = os.getenv("WAZUH_VERIFY_TLS", "true").lower() not in (
+    "false",
+    "0",
+    "no",
+)
 
 
 def _authenticate(base_url: str, username: str, password: str) -> str | None:
@@ -27,9 +38,9 @@ def _authenticate(base_url: str, username: str, password: str) -> str | None:
             f"{base_url}/security/user/authenticate",
             auth=(username, password),
             timeout=TIMEOUT,
-            verify=False,  # nosec: lab use; production should verify certs
+            verify=WAZUH_VERIFY_TLS,
         )
-        if resp.status_code == 200:
+        if resp.status_code == HTTPStatus.OK:
             data = resp.json()
             return data.get("data", {}).get("token")
     except (requests.RequestException, ValueError, KeyError):
@@ -39,7 +50,7 @@ def _authenticate(base_url: str, username: str, password: str) -> str | None:
 
 def parse_wazuh_alert(alert: dict[str, Any]) -> dict[str, Any]:
     """Parse a Wazuh alert into Event schema."""
-    timestamp = alert.get("timestamp", datetime.now(tz=timezone.utc).isoformat())
+    timestamp = alert.get("timestamp", datetime.now(tz=UTC).isoformat())
     src_ip = alert.get("data", {}).get("srcip", "unknown")
     rule = alert.get("rule", {})
     agent = alert.get("agent", {})
@@ -96,9 +107,9 @@ def poll_wazuh(
             headers=headers,
             params=params,
             timeout=TIMEOUT,
-            verify=False,  # nosec: lab use
+            verify=WAZUH_VERIFY_TLS,
         )
-        if resp.status_code != 200:
+        if resp.status_code != HTTPStatus.OK:
             return 0
 
         data = resp.json()
@@ -111,8 +122,7 @@ def poll_wazuh(
             store.insert_event(event)
             count += 1
             alert_id = alert.get("id", 0)
-            if alert_id > max_id:
-                max_id = alert_id
+            max_id = max(max_id, alert_id)
 
         if max_id > last_id:
             store.set_kv(last_id_key, str(max_id))
@@ -125,10 +135,6 @@ def poll_wazuh(
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point for Wazuh collector."""
-    import sys
-    import sqlite3
-    from argparse import ArgumentParser
-
     parser = ArgumentParser(description="SentinelGate Wazuh collector")
     parser.add_argument("--url", default=WAZUH_URL, help="Wazuh API URL")
     parser.add_argument("--user", default=WAZUH_USER, help="Wazuh username")
@@ -164,5 +170,4 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    import sys
     sys.exit(main())

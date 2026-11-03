@@ -12,9 +12,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import random
 import sys
 from argparse import ArgumentParser
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timedelta
 
 try:
     import joblib
@@ -27,6 +28,8 @@ except ImportError:
 
 
 from ml.features import extract_features
+
+MIN_EVENTS_FOR_TRAINING = 50
 
 
 def load_events(log_path: str, limit: int = 10000) -> list[dict]:
@@ -47,17 +50,17 @@ def load_events(log_path: str, limit: int = 10000) -> list[dict]:
 
 def generate_synthetic_baseline(n: int = 500) -> list[dict]:
     """Generate synthetic normal traffic events."""
-    import random
-    from datetime import timedelta
-
-    base = datetime.now(tz=timezone.utc)
+    base = datetime.now(tz=UTC)
     events = []
     for i in range(n):
         dt = base + timedelta(seconds=i * 0.1)
         events.append({
             "timestamp": dt.isoformat(),
-            "source_ip": f"192.0.2.{random.randint(1, 10)}",
-            "path": random.choice(["/", "/about", "/contact", "/api/status"]),
+            # Non-security randomness: synthetic training data only.
+            "source_ip": f"192.0.2.{random.randint(1, 10)}",  # noqa: S311  # nosec B311
+            "path": random.choice(  # noqa: S311  # nosec B311
+                ["/", "/about", "/contact", "/api/status"]
+            ),
             "query": "",
             "status": 200,
         })
@@ -98,9 +101,9 @@ def train_model(events: list[dict], output_path: str) -> None:
         print("ERROR: No features extracted from events.", file=sys.stderr)
         return
 
-    X = np.array(feature_rows)
+    feature_matrix = np.array(feature_rows)
     model = IsolationForest(contamination=0.1, random_state=42)
-    model.fit(X)
+    model.fit(feature_matrix)
 
     # Save model
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -116,7 +119,7 @@ def train_model(events: list[dict], output_path: str) -> None:
         "version": "1.0",
         "model_type": "IsolationForest",
         "feature_names": feature_names,
-        "trained_at": datetime.now(tz=timezone.utc).isoformat(),
+        "trained_at": datetime.now(tz=UTC).isoformat(),
         "training_samples": len(feature_rows),
         "sha256": model_hash,
     }
@@ -143,8 +146,12 @@ def main(argv: list[str] | None = None) -> int:
         events = generate_synthetic_baseline(500)
     else:
         events = load_events(args.input, limit=10000)
-        if len(events) < 50:
-            print(f"WARNING: Only {len(events)} events in log. Using synthetic baseline.", file=sys.stderr)
+        if len(events) < MIN_EVENTS_FOR_TRAINING:
+            print(
+                f"WARNING: Only {len(events)} events in log. "
+                "Using synthetic baseline.",
+                file=sys.stderr,
+            )
             events = generate_synthetic_baseline(500)
 
     train_model(events, args.output)

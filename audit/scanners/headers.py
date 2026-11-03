@@ -6,8 +6,9 @@ Referrer-Policy, and secure cookie flags.
 
 from __future__ import annotations
 
-import requests
 from typing import Any
+
+import requests
 
 
 def scan_headers(target_url: str, timeout: float = 5.0) -> list[dict[str, Any]]:
@@ -38,7 +39,10 @@ def scan_headers(target_url: str, timeout: float = 5.0) -> list[dict[str, Any]]:
                 "type": "missing_hsts",
                 "title": "Missing HSTS header",
                 "evidence": "No Strict-Transport-Security header found",
-                "remediation": "Add 'Strict-Transport-Security: max-age=31536000; includeSubDomains'",
+                "remediation": (
+                    "Add 'Strict-Transport-Security: max-age=31536000; "
+                    "includeSubDomains'"
+                ),
             }
         )
 

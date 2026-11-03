@@ -7,8 +7,19 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
+
+CASE_COLUMNS = [
+    "id",
+    "title",
+    "severity",
+    "status",
+    "assignee",
+    "notes",
+    "created_at",
+    "updated_at",
+]
 
 
 class CaseManager:
@@ -56,7 +67,7 @@ class CaseManager:
     ) -> str:
         """Create a new case and return its ID."""
         case_id = f"CASE-{uuid.uuid4().hex[:8].upper()}"
-        now = datetime.now(tz=timezone.utc).isoformat()
+        now = datetime.now(tz=UTC).isoformat()
 
         self.conn.execute(
             """
@@ -68,7 +79,7 @@ class CaseManager:
         self.conn.commit()
 
         # Add creation to timeline
-        entry = f"Case created"
+        entry = "Case created"
         if alert_id:
             entry += f" from alert {alert_id}"
         self.add_timeline_entry(case_id, entry, "system")
@@ -82,8 +93,7 @@ class CaseManager:
         ).fetchone()
         if not row:
             return None
-        columns = ["id", "title", "severity", "status", "assignee", "notes", "created_at", "updated_at"]
-        return dict(zip(columns, row))
+        return dict(zip(CASE_COLUMNS, row, strict=False))
 
     def list_cases(self, status: str | None = None, limit: int = 100) -> list[dict]:
         """List cases, optionally filtered by status."""
@@ -96,8 +106,7 @@ class CaseManager:
             rows = self.conn.execute(
                 "SELECT * FROM cases ORDER BY created_at DESC LIMIT ?", (limit,)
             )
-        columns = ["id", "title", "severity", "status", "assignee", "notes", "created_at", "updated_at"]
-        return [dict(zip(columns, row)) for row in rows.fetchall()]
+        return [dict(zip(CASE_COLUMNS, row, strict=False)) for row in rows.fetchall()]
 
     def update_case(
         self,
@@ -112,7 +121,7 @@ class CaseManager:
         if not case:
             return False
 
-        now = datetime.now(tz=timezone.utc).isoformat()
+        now = datetime.now(tz=UTC).isoformat()
         updates = []
         values = []
         timeline_entries = []
@@ -139,10 +148,11 @@ class CaseManager:
         values.append(now)
         values.append(case_id)
 
-        self.conn.execute(
-            f"UPDATE cases SET {', '.join(updates)} WHERE id = ?",
-            values,
+        # ``updates`` only ever contains the fixed fragments appended above.
+        query = (
+            f"UPDATE cases SET {', '.join(updates)} WHERE id = ?"  # noqa: S608  # nosec B608
         )
+        self.conn.execute(query, values)
         self.conn.commit()
 
         for entry in timeline_entries:
@@ -152,7 +162,7 @@ class CaseManager:
 
     def add_timeline_entry(self, case_id: str, entry: str, actor: str) -> None:
         """Add an entry to the case timeline."""
-        now = datetime.now(tz=timezone.utc).isoformat()
+        now = datetime.now(tz=UTC).isoformat()
         self.conn.execute(
             "INSERT INTO case_timeline (case_id, entry, actor, created_at) VALUES (?, ?, ?, ?)",
             (case_id, entry, actor, now),
@@ -171,4 +181,4 @@ class CaseManager:
             (case_id,),
         )
         columns = ["entry", "actor", "created_at"]
-        return [dict(zip(columns, row)) for row in rows.fetchall()]
+        return [dict(zip(columns, row, strict=False)) for row in rows.fetchall()]

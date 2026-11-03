@@ -7,8 +7,11 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
+import sys
 import time
-from datetime import datetime, timezone
+from argparse import ArgumentParser
+from datetime import UTC, datetime
 from typing import Any
 
 from siem.storage import Store
@@ -26,10 +29,9 @@ def parse_suricata_event(line: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
     alert = line.get("alert", {})
-    flow = line.get("flow", {})
     src_ip = line.get("src_ip", "unknown")
     dest_ip = line.get("dest_ip", "")
-    timestamp = line.get("timestamp", datetime.now(tz=timezone.utc).isoformat())
+    timestamp = line.get("timestamp", datetime.now(tz=UTC).isoformat())
 
     # Map Suricata alert to our Event schema
     return {
@@ -96,10 +98,6 @@ def tail_suricata(
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point for Suricata collector."""
-    import sys
-    import sqlite3
-    from argparse import ArgumentParser
-
     parser = ArgumentParser(description="SentinelGate Suricata collector")
     parser.add_argument("--eve", default=DEFAULT_EVE_PATH, help="Path to eve.json")
     parser.add_argument("--db", default="logs/siem.db", help="Path to SQLite DB")
@@ -122,5 +120,4 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    import sys
     sys.exit(main())

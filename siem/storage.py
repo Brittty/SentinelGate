@@ -103,7 +103,10 @@ class Store:
 
     @staticmethod
     def _rows_to_dicts(rows) -> list[dict]:
-        return [dict(zip([d[0] for d in rows.description], row)) for row in rows.fetchall()]
+        columns = [d[0] for d in rows.description]
+        return [
+            dict(zip(columns, row, strict=False)) for row in rows.fetchall()
+        ]
 
     # -- alerts -----------------------------------------------------------
 

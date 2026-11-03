@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import socket
 import ssl
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
 
@@ -45,8 +45,8 @@ def scan_tls(target_url: str, timeout: float = 5.0) -> list[dict[str, Any]]:
                     not_after = cert.get("notAfter", "")
                     if not_after:
                         expiry = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z")
-                        expiry = expiry.replace(tzinfo=timezone.utc)
-                        now = datetime.now(tz=timezone.utc)
+                        expiry = expiry.replace(tzinfo=UTC)
+                        now = datetime.now(tz=UTC)
                         if expiry < now:
                             findings.append(
                                 {
@@ -78,11 +78,14 @@ def scan_tls(target_url: str, timeout: float = 5.0) -> list[dict[str, Any]]:
                                 "type": "weak_cipher",
                                 "title": "Weak cipher suite detected",
                                 "evidence": f"Cipher: {cipher_name}",
-                                "remediation": "Disable weak ciphers; use AEAD ciphers (AES-GCM, ChaCha20)",
+                                "remediation": (
+                                    "Disable weak ciphers; use AEAD ciphers "
+                                    "(AES-GCM, ChaCha20)"
+                                ),
                             }
                         )
 
-    except (socket.error, ssl.SSLError, ValueError) as e:
+    except (OSError, ssl.SSLError, ValueError) as e:
         findings.append(
             {
                 "type": "tls_error",

@@ -5,11 +5,13 @@ Run: streamlit run dashboard/app.py
 
 from __future__ import annotations
 
+import hmac
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import streamlit as st
+from dotenv import load_dotenv
 
 from dashboard.data import (
     get_alert_counts,
@@ -20,11 +22,14 @@ from dashboard.data import (
     get_top_attackers,
 )
 
+# Load .env so DASHBOARD_PASSWORD and DB_PATH can be configured locally.
+load_dotenv()
+
 # Page config
 st.set_page_config(page_title="SentinelGate Dashboard", page_icon="🛡️", layout="wide")
 
-# Password protection
-DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "admin")
+# Password protection. No default: an unset password fails closed.
+DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "")
 
 
 def check_password():
@@ -36,11 +41,17 @@ def check_password():
         return True
 
     st.title("🛡️ SentinelGate Dashboard")
+
+    if not DASHBOARD_PASSWORD:
+        st.error("DASHBOARD_PASSWORD is not set.")
+        st.info("Set it in `.env` and restart the dashboard before logging in.")
+        return False
+
     st.write("Enter password to access the dashboard.")
 
     password = st.text_input("Password", type="password", key="password_input")
     if st.button("Login"):
-        if password == DASHBOARD_PASSWORD:
+        if hmac.compare_digest(password, DASHBOARD_PASSWORD):
             st.session_state.authenticated = True
             st.rerun()
         else:
@@ -184,7 +195,7 @@ blocklist = get_blocklist(conn)
 if blocklist:
     blocked_data = []
     for block in blocklist:
-        banned_until = datetime.fromtimestamp(block["banned_until"], tz=timezone.utc)
+        banned_until = datetime.fromtimestamp(block["banned_until"], tz=UTC)
         blocked_data.append(
             {
                 "IP": block["ip"],

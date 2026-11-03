@@ -14,6 +14,7 @@ import random
 import sys
 import time
 from argparse import ArgumentParser
+from http import HTTPStatus
 from urllib.parse import urlparse
 
 import requests
@@ -21,12 +22,15 @@ import requests
 ALLOWED_TARGETS = os.getenv("ALLOWED_TARGETS", "").split(",")
 ALLOWED_TARGETS = [t.strip() for t in ALLOWED_TARGETS if t.strip()]
 
+HTTP_FORBIDDEN = HTTPStatus.FORBIDDEN
+HTTP_TOO_MANY_REQUESTS = HTTPStatus.TOO_MANY_REQUESTS
+
 WARNING = """
-╔════════════════════════════════════════════════════════════════╗
-║  WARNING: ATTACK SIMULATOR - LAB USE ONLY                      ║
-║  This tool generates malicious traffic for testing purposes.   ║
-║  Only run against systems you own or have permission to test.  ║
-╚════════════════════════════════════════════════════════════════╝
++------------------------------------------------------------------+
+|  WARNING: ATTACK SIMULATOR - LAB USE ONLY                        |
+|  This tool generates malicious traffic for testing purposes.     |
+|  Only run against systems you own or have permission to test.    |
++------------------------------------------------------------------+
 """
 
 
@@ -44,7 +48,11 @@ def validate_target(url: str) -> bool:
 def run_scenario(scenario: str, target: str, count: int = 20) -> dict:
     """Run a scenario and return summary stats."""
     if not validate_target(target):
-        print(f"ERROR: Target {target} not allowed. Must be localhost or in ALLOWED_TARGETS.", file=sys.stderr)
+        print(
+            f"ERROR: Target {target} not allowed. "
+            "Must be localhost or in ALLOWED_TARGETS.",
+            file=sys.stderr,
+        )
         return {"sent": 0, "blocked": 0, "throttled": 0, "allowed": 0, "errors": 0}
 
     print(WARNING)
@@ -71,7 +79,7 @@ def run_scenario(scenario: str, target: str, count: int = 20) -> dict:
     else:
         print(f"ERROR: Unknown scenario '{scenario}'", file=sys.stderr)
 
-    print(f"\n[✓] Summary:")
+    print("\n[+] Summary:")
     print(f"    Sent:      {stats['sent']}")
     print(f"    Allowed:   {stats['allowed']}")
     print(f"    Throttled: {stats['throttled']}")
@@ -88,13 +96,14 @@ def _brute_force(target: str, count: int) -> dict:
         try:
             resp = requests.post(
                 f"{target}/login",
-                data={"username": f"admin{i}", "password": "wrong"},
+                # The simulated credential is intentionally wrong; nothing is stored.
+                data={"username": f"admin{i}", "password": "wrong"},  # nosec B105
                 timeout=2.0,
             )
             stats["sent"] += 1
-            if resp.status_code == 403:
+            if resp.status_code == HTTP_FORBIDDEN:
                 stats["blocked"] += 1
-            elif resp.status_code == 429:
+            elif resp.status_code == HTTP_TOO_MANY_REQUESTS:
                 stats["throttled"] += 1
             else:
                 stats["allowed"] += 1
@@ -116,14 +125,14 @@ def _sqli(target: str, count: int) -> dict:
         "1' OR '1'='1' /*",
         "1; SELECT * FROM users",
     ]
-    for i in range(count):
-        payload = random.choice(payloads)
+    for _ in range(count):
+        payload = random.choice(payloads)  # nosec B311
         try:
             resp = requests.get(f"{target}/search", params={"q": payload}, timeout=2.0)
             stats["sent"] += 1
-            if resp.status_code == 403:
+            if resp.status_code == HTTP_FORBIDDEN:
                 stats["blocked"] += 1
-            elif resp.status_code == 429:
+            elif resp.status_code == HTTP_TOO_MANY_REQUESTS:
                 stats["throttled"] += 1
             else:
                 stats["allowed"] += 1
@@ -142,14 +151,14 @@ def _xss(target: str, count: int) -> dict:
         "javascript:alert(1)",
         "<svg/onload=alert(1)>",
     ]
-    for i in range(count):
-        payload = random.choice(payloads)
+    for _ in range(count):
+        payload = random.choice(payloads)  # nosec B311
         try:
             resp = requests.get(f"{target}/search", params={"q": payload}, timeout=2.0)
             stats["sent"] += 1
-            if resp.status_code == 403:
+            if resp.status_code == HTTP_FORBIDDEN:
                 stats["blocked"] += 1
-            elif resp.status_code == 429:
+            elif resp.status_code == HTTP_TOO_MANY_REQUESTS:
                 stats["throttled"] += 1
             else:
                 stats["allowed"] += 1
@@ -168,14 +177,14 @@ def _path_traversal(target: str, count: int) -> dict:
         "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
         "....//....//....//etc/passwd",
     ]
-    for i in range(count):
-        payload = random.choice(payloads)
+    for _ in range(count):
+        payload = random.choice(payloads)  # nosec B311
         try:
             resp = requests.get(f"{target}/file", params={"name": payload}, timeout=2.0)
             stats["sent"] += 1
-            if resp.status_code == 403:
+            if resp.status_code == HTTP_FORBIDDEN:
                 stats["blocked"] += 1
-            elif resp.status_code == 429:
+            elif resp.status_code == HTTP_TOO_MANY_REQUESTS:
                 stats["throttled"] += 1
             else:
                 stats["allowed"] += 1
@@ -193,13 +202,13 @@ def _scan(target: str, count: int) -> dict:
         "/config.php", "/.svn", "/backup.sql", "/db.sql", "/.DS_Store",
     ]
     for i in range(count):
-        path = random.choice(paths) + str(i)
+        path = random.choice(paths) + str(i)  # nosec B311
         try:
             resp = requests.get(f"{target}{path}", timeout=2.0)
             stats["sent"] += 1
-            if resp.status_code == 403:
+            if resp.status_code == HTTP_FORBIDDEN:
                 stats["blocked"] += 1
-            elif resp.status_code == 429:
+            elif resp.status_code == HTTP_TOO_MANY_REQUESTS:
                 stats["throttled"] += 1
             else:
                 stats["allowed"] += 1
@@ -214,13 +223,13 @@ def _dos_lite(target: str, count: int) -> dict:
     stats = {"sent": 0, "blocked": 0, "throttled": 0, "allowed": 0, "errors": 0}
     count = min(count, 200)  # Hard cap
     print(f"[!] DoS lite capped at {count} requests")
-    for i in range(count):
+    for _ in range(count):
         try:
             resp = requests.get(f"{target}/", timeout=0.5)
             stats["sent"] += 1
-            if resp.status_code == 403:
+            if resp.status_code == HTTP_FORBIDDEN:
                 stats["blocked"] += 1
-            elif resp.status_code == 429:
+            elif resp.status_code == HTTP_TOO_MANY_REQUESTS:
                 stats["throttled"] += 1
             else:
                 stats["allowed"] += 1
@@ -246,13 +255,28 @@ def _mixed(target: str, count: int) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     parser = ArgumentParser(description="SentinelGate attack simulator (LAB USE ONLY)")
+    scenarios = [
+        "brute_force",
+        "sqli",
+        "xss",
+        "path_traversal",
+        "scan",
+        "dos_lite",
+        "mixed",
+    ]
     parser.add_argument(
         "scenario",
-        choices=["brute_force", "sqli", "xss", "path_traversal", "scan", "dos_lite", "mixed"],
+        choices=scenarios,
         help="Attack scenario to run",
     )
-    parser.add_argument("--target", default="http://127.0.0.1:8000", help="Target URL (default: localhost:8000)")
-    parser.add_argument("--count", type=int, default=20, help="Number of requests (default: 20)")
+    parser.add_argument(
+        "--target",
+        default="http://127.0.0.1:8000",
+        help="Target URL (default: localhost:8000)",
+    )
+    parser.add_argument(
+        "--count", type=int, default=20, help="Number of requests (default: 20)"
+    )
     args = parser.parse_args(argv)
 
     run_scenario(args.scenario, args.target, args.count)

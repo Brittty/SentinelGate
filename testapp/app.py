@@ -71,5 +71,5 @@ def admin():
 
 
 if __name__ == "__main__":
-    # nosec: lab-only dev server bound to localhost.
-    app.run(host="127.0.0.1", port=5000, debug=False)  # noqa: S104
+    # Local-only demo server; never exposed beyond loopback.
+    app.run(host="127.0.0.1", port=5000, debug=False)

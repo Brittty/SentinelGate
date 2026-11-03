@@ -6,19 +6,28 @@ Generates comprehensive incident reports with timeline, evidence, and recommenda
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 try:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import letter
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.platypus import (
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
 
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
+
+MAX_LISTED_IPS = 20
 
 
 def generate_incident_report(
@@ -83,7 +92,7 @@ def generate_incident_report(
         ["Severity:", case.get("severity", "").upper()],
         ["Status:", case.get("status", "").upper()],
         ["Created:", case.get("created_at", "")[:19]],
-        ["Report Generated:", datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")],
+        ["Report Generated:", datetime.now(tz=UTC).strftime("%Y-%m-%d %H:%M:%S UTC")],
     ]
     summary_table = Table(summary_data, colWidths=[2 * inch, 4 * inch])
     summary_table.setStyle(TableStyle([
@@ -100,9 +109,10 @@ def generate_incident_report(
 
     # Affected IPs
     story.append(Paragraph("Affected IP Addresses", heading_style))
-    story.append(Paragraph(", ".join(affected_ips[:20]), styles['Normal']))
-    if len(affected_ips) > 20:
-        story.append(Paragraph(f"...and {len(affected_ips) - 20} more", styles['Normal']))
+    story.append(Paragraph(", ".join(affected_ips[:MAX_LISTED_IPS]), styles['Normal']))
+    if len(affected_ips) > MAX_LISTED_IPS:
+        remaining = len(affected_ips) - MAX_LISTED_IPS
+        story.append(Paragraph(f"...and {remaining} more", styles['Normal']))
     story.append(Spacer(1, 0.2 * inch))
 
     # Attack types

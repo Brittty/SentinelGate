@@ -41,13 +41,12 @@ Write-Host "[5] Checking results..." -ForegroundColor Green
 # Query database for events
 $db_path = "logs\siem.db"
 if (Test-Path $db_path) {
-    $events = & sqlite3 $db_path "SELECT COUNT(*) FROM events"
-    $alerts = & sqlite3 $db_path "SELECT COUNT(*) FROM alerts"
-    $blocked = & sqlite3 $db_path "SELECT COUNT(*) FROM blocklist"
+    $query = "import sqlite3;c=sqlite3.connect('logs/siem.db');print(','.join(str(c.execute('SELECT COUNT(*) FROM '+t).fetchone()[0]) for t in ('events','alerts','blocklist')));c.close()"
+    $counts = ([string](python -c $query)).Split(",")
 
-    Write-Host "    Events logged: $events" -ForegroundColor Cyan
-    Write-Host "    Alerts raised: $alerts" -ForegroundColor Cyan
-    Write-Host "    IPs blocked:   $blocked" -ForegroundColor Cyan
+    Write-Host "    Events logged: $($counts[0])" -ForegroundColor Cyan
+    Write-Host "    Alerts raised: $($counts[1])" -ForegroundColor Cyan
+    Write-Host "    IPs blocked:   $($counts[2])" -ForegroundColor Cyan
 } else {
     Write-Host "    Database not found. Events may still be processing." -ForegroundColor Yellow
 }
@@ -59,7 +58,10 @@ Write-Host ""
 Write-Host "    Press Ctrl+C to stop all services." -ForegroundColor Yellow
 Write-Host ""
 
-# Start dashboard (foreground, blocking)
+# Start dashboard (foreground, blocking). Supply a demo password if unset.
+if (-not $env:DASHBOARD_PASSWORD) {
+    $env:DASHBOARD_PASSWORD = "sentinelgate-demo"
+}
 try {
     python -m streamlit run dashboard\app.py
 } finally {
@@ -69,5 +71,5 @@ try {
     Stop-Process -Id $testapp.Id -Force -ErrorAction SilentlyContinue
     Stop-Process -Id $gateway.Id -Force -ErrorAction SilentlyContinue
     Stop-Process -Id $collector.Id -Force -ErrorAction SilentlyContinue
-    Write-Host "[✓] Demo stopped." -ForegroundColor Green
+    Write-Host "[OK] Demo stopped." -ForegroundColor Green
 }
