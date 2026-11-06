@@ -1,11 +1,11 @@
-# SentinelGate — Progress Log
+﻿# SentinelGate â€” Progress Log
 
 ## Environment (decisions recorded)
 
 - OS: Windows 11; shell: PowerShell 5.1 (`powershell.exe`; `pwsh` not on PATH)
 - Python: 3.14.7; venv at `.venv`; project targets 3.12+
 - git 2.55; Docker Desktop available (optional)
-- nmap: NOT installed — the port scanner returns a `tool_unavailable` finding
+- nmap: NOT installed â€” the port scanner returns a `tool_unavailable` finding
 - ML stack: installed and working on cp314 (scikit-learn 1.9.1, numpy 2.5.4,
   joblib 1.6.0). Dependency bounds were relaxed so a clean install resolves
   current wheels instead of the old `<1.7` pins that had no cp314 wheel.
@@ -34,13 +34,13 @@
 
 ## Verification (last run)
 
-- `python -m pytest -q` — **184 passed, 0 skipped**
-- Coverage for required packages — **88% total**
+- `python -m pytest -q` â€” **184 passed, 0 skipped**
+- Coverage for required packages â€” **88% total**
   (gateway 87%, idps 83%, siem 84%, response 97%, audit 93%)
-- `python -m ruff check .` — **0 findings**
-- `python -m bandit -r <packages> -q` — **0 open findings**
+- `python -m ruff check .` â€” **0 findings**
+- `python -m bandit -r <packages> -q` â€” **0 open findings**
   (14 justified `# nosec` markers; see the security review)
-- `python -m pip_audit` — **no known vulnerabilities**
+- `python -m pip_audit` â€” **no known vulnerabilities**
 - Landing page: anchors and relative links validated; skip link, focus styles,
   mobile nav with `aria-expanded`, and `prefers-reduced-motion` handling present
 - Docker Compose web service serves the repo at port 8080 and redirects to `/web/`
@@ -53,7 +53,7 @@
 ## Fixes made in the final pass
 
 - **Lint**: removed 260 ruff findings (line length, unused imports, `zip(strict=)`,
-  magic numbers → named constants, lazy imports, subprocess handling).
+  magic numbers â†’ named constants, lazy imports, subprocess handling).
 - **Coverage**: added `tests/test_scanners.py`, `tests/test_telegram.py`, and
   Wazuh/collector/storage cases in the integration and SIEM suites.
 - **Security**: dashboard login fails closed without `DASHBOARD_PASSWORD` and
@@ -79,3 +79,12 @@
 - Redis distributed rate limiting / storage
 - REST API and webhook notifications (Slack, PagerDuty)
 - Architecture and rules guides (`docs/architecture.md`, `docs/rules-guide.md`)
+
+## README Rewrite — DONE
+- Files: README.md (rewritten, 383 lines)
+- Clean emojis (no mojibake), no null bytes, well-formed markdown
+- Sections: Badges, Features table, Architecture (Mermaid), Quick Start, Configuration table, Project Structure, Testing, Attack Simulator, Running Components, Security Scans, Development, Responsible Use, Documentation links, Roadmap table, Contributing, License, Credits, Contact
+- Test result: N/A (documentation only)
+- Ruff: N/A
+- Commit: "Rewrite README.md — proper documentation with all sections"
+
